@@ -76,7 +76,7 @@ export default function EditAccountInformation({
   });
 
   const onSubmitChangeUserName = useMutation({
-    mutationFn: (data: { username: string }) => {
+    mutationFn: (data: { userName: string }) => {
       return axios_auth.post<ResponseData<object>>(
         "/user/profile/change-username",
         data
@@ -87,15 +87,22 @@ export default function EditAccountInformation({
         toast.success("User name changed successfully.");
         setOpenEditUserNameDialog(false);
         mutate.mutate();
+        return;
       } else if (response.status === 400) {
         if (response.data.message === "VALIDATION_ERROR") {
           toastValidateError(response);
-        } else if (response.data.message === "USERNAME_ALREADY_EXISTS") {
-          toast.error("User name already exists."); 
+          return;
         }
-      } else {
-        toast.error("Failed to change user name.");
+      } else if (response.status === 409) {
+        if (response.data.message === "USER_NAME_ALREADY_EXISTS") {
+          toast.error("User name already exists.");
+          return;
+        } else if (response.data.message === "USER_NAME_NOT_CHANGED") {
+          toast.error("User name is not changed.");
+          return;
+        }
       }
+      toast.error("Failed to change user name.");
     },
   });
 

@@ -12,7 +12,7 @@ import RegisterPage from "@/components/pages/register.page";
 import ForgotPassword from "@/components/pages/forgot-password.page";
 import OuterLayout from "@/components/layouts/x.layout";
 import SettingPage from "@/components/pages/setting.page";
-import LinkSuccessPage from "@/components/pages/link-sucess.page";
+import LinkGoogleCallbackPage from "@/components/pages/link-sucess.page";
 
 const appRouterConfig: RouteObject[] = [
   {
@@ -71,7 +71,7 @@ const appRouterConfig: RouteObject[] = [
       },
       {
         path: "link-to-google",
-        element: <LinkSuccessPage></LinkSuccessPage>,
+        element: <LinkGoogleCallbackPage></LinkGoogleCallbackPage>,
       },
     ],
   },

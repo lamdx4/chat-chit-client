@@ -8,7 +8,7 @@ import { ResponseData } from "@/types/response.types";
 import User from "@/types/user";
 import useAuth from "@/hooks/use-auth";
 
-const LinkSuccessPage: React.FC = () => {
+const LinkGoogleCallbackPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -70,4 +70,4 @@ const LinkSuccessPage: React.FC = () => {
   );
 };
 
-export default LinkSuccessPage;
+export default LinkGoogleCallbackPage;

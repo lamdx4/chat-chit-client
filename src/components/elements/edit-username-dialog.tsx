@@ -22,39 +22,39 @@ import { UseMutationResult } from "@tanstack/react-query";
 import { AxiosResponse } from "axios";
 import { ResponseData } from "@/types/response.types";
 
-type EditUserNameDialogProp = {
+type EdituserNameDialogProp = {
   isOpen: boolean;
   onClose?: () => void;
   onSubmit: UseMutationResult<
     AxiosResponse<ResponseData<object>, unknown>,
     Error,
     {
-      username: string;
+      userName: string;
     },
     unknown
   >;
 };
 
 const formSchema = z.object({
-  username: z
+  userName: z
     .string()
     .nonempty("User name is required")
     .min(3, "User name must be at least 3 characters")
     .max(30, "User name must be at most 30 characters")
     .regex(
       /^[a-z0-9]+$/,
-      "Username can only contain lowercase letters and numbers"
+      "userName can only contain lowercase letters and numbers"
     ),
 });
 
-export default function EditUserNameDialog({
+export default function EdituserNameDialog({
   isOpen,
   onClose,
   onSubmit,
-}: EditUserNameDialogProp) {
+}: EdituserNameDialogProp) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { username: "" },
+    defaultValues: { userName: "" },
   });
 
   function handleSubmit(values: z.infer<typeof formSchema>) {
@@ -77,7 +77,7 @@ export default function EditUserNameDialog({
           >
             <FormField
               control={form.control}
-              name="username"
+              name="userName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>User Name</FormLabel>

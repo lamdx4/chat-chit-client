@@ -1,47 +1,26 @@
-import * as signalR from "@microsoft/signalr";
-import { toast } from "sonner";
+import { io, Socket } from "socket.io-client";
 
-let connection: signalR.HubConnection | null = null;
+let connection: Socket | null = null;
 
-export function initializeSocket(): signalR.HubConnection {
-  if (!connection)
-    connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://localhost:57679/io/chat", {
-        withCredentials: true,
-        accessTokenFactory: () => {
-          const token = localStorage.getItem("accessToken");
-          if (token) {
-            return token;
-          }
-          throw new Error("No access token found");
-        },
-      })
-      .configureLogging(signalR.LogLevel.Debug)
-      .withAutomaticReconnect()
-      .build();
-  connection
-    .start()
-    .then(() => {
-      console.log("[SignalR] Connection started");
-    })
-    .catch((error) => {
-      console.error("[SignalR] Error starting connection", error);
-      toast("Error starting connection socket")
-    });
+export function initializeSocket() {
+  if (!connection) connection = io(import.meta.env.VITE_URL_BACKEND + "/");
 
-  connection.onclose((error) => {
-    console.error("[SignalR] Connection closed", error);
+  connection.on("disconnect", (reason, details) => {
+    console.error("[Socket.IO] Disconnected:", reason, details);
   });
-  connection.onreconnected((connectionId) => {
-    console.log("[SignalR] Reconnected", connectionId);
+  connection.on("connect", () => {
+    console.log("[Socket.IO] Connected");
   });
-  connection.onreconnecting((error) => {
-    console.warn("[SignalR] Reconnecting...", error);
+  connection.on("connect_error", (error) => {
+    console.log("[Socket.IO] Connected:", error);
+  });
+  connection.on("reconnect_attempt", () => {
+    console.warn("[Socket.IO] Reconnecting attempt");
   });
 
   return connection;
 }
 
-export function getSocket(): signalR.HubConnection | null {
+export function getSocket() {
   return connection;
 }
