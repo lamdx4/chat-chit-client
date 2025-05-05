@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Search,
   UserPlus,
-  Users,
   UserCheck,
   X,
   Check,

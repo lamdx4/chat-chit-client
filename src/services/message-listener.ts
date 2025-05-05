@@ -2,10 +2,11 @@ import { EventEmitter } from "events";
 import { initializeSocket } from "@/socketio/socket";
 import Group from "@/types/group.model";
 import Message from "@/types/message.model";
+import { Socket } from "socket.io-client";
 
 class MessageListener extends EventEmitter {
   private static instance: MessageListener;
-  private socket: signalR.HubConnection;
+  private socket: Socket;
 
   constructor() {
     super();
