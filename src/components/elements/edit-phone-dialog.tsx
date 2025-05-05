@@ -43,7 +43,9 @@ export default function EditPhoneDialog({
     defaultValues: { phone: "" },
   });
 
-  function onSubmit(values: PhoneForm) {}
+  function onSubmit(
+    // values: PhoneForm
+  ) {}
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -20,11 +20,5 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-    #   - name: Run Linter
-    #     run: npm run lint
-
-    #   - name: Run Tests
-    #     run: npm test
-
       - name: Build project
         run: yarn run build
