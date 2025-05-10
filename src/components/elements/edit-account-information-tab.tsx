@@ -29,6 +29,25 @@ export default function EditAccountInformation({
   const [isOpenEditPhoneDialog, setOpenEditPhoneDialog] = useState(false);
   const [isOpenEditUserNameDialog, setOpenEditUserNameDialog] = useState(false);
 
+  const unLinkGoogleAccount = useMutation({
+    mutationFn: () => {
+      return axios_auth.post<ResponseData<object>>(
+        "/user/unlink/google-account"
+      );
+    },
+    onSuccess(response) {
+      if (response.status === 200) {
+        toast.success("Google account unlinked successfully.");
+        mutate.mutate();
+      } else {
+        toast.error("Failed to unlink Google account.");
+      }
+    },
+    onError(error) {
+      console.log("Error unlinking Google account:", error);
+    },
+  });
+
   const redirectGoogleLoginMutate = useMutation({
     mutationFn: () => {
       return axios_auth.get<ResponseData<GetUrlGoogleLoginResponse>>(
@@ -160,8 +179,20 @@ export default function EditAccountInformation({
               variant={"ghost"}
               className="text-blue-500 hover:text-blue-600 transition duration-200 hover:underline"
             >
-              {user.email ? "Remove and add new one" : "Add new email"}
+              {user.email ? "Replace the new one" : "Add new email"}
             </Button>
+
+            {user.email && (
+              <Button
+                onClick={() => {
+                  unLinkGoogleAccount.mutate();
+                }}
+                variant={"ghost"}
+                className="text-blue-500 hover:text-blue-600 transition duration-200 hover:underline"
+              >
+                {"Remove "}
+              </Button>
+            )}
           </div>
         </div>
 
