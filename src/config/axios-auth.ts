@@ -1,4 +1,3 @@
-import useAuth from "@/hooks/use-auth";
 import { AccessToken } from "@/services/types/get-access-token-response.types";
 import { ResponseData } from "@/types/response.types";
 import { eventBus } from "@/utils/events";
