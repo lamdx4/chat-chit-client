@@ -1,6 +1,7 @@
 import User from "@/types/user";
 import { AuthProviderProps, AuthProviderStore } from "./auth-provider.types";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { eventBus } from "@/utils/events";
 
 function getSaveAuthData(): AuthProviderStore {
   const userJson = localStorage.getItem("user");
@@ -102,6 +103,7 @@ function useAuthProviderModel(_props: AuthProviderProps) {
     }));
     localStorage.setItem("user", JSON.stringify(user));
   }, []);
+  
   const updateAccessToken = useCallback((accessToken: string) => {
     setStore((prev) => ({
       ...prev,
@@ -109,6 +111,29 @@ function useAuthProviderModel(_props: AuthProviderProps) {
     }));
     localStorage.setItem("accessToken", accessToken);
   }, []);
+
+  useEffect(() => {
+    // Khi token được refresh
+    const tokenRefreshedUnsub = eventBus.subscribe(
+      "auth:token-refreshed",
+      (newToken: string) => {
+        console.log("Token refreshed in hook:", newToken);
+        updateAccessToken(newToken);
+      }
+    );
+
+    // Khi logout
+    const logoutUnsub = eventBus.subscribe("auth:logout", () => {
+      console.log("Logout triggered in hook");
+      signout();
+    });
+
+    return () => {
+      tokenRefreshedUnsub();
+      logoutUnsub();
+    };
+  }, []);
+
   return {
     store,
     authenticate,

@@ -1,6 +1,7 @@
 import useAuth from "@/hooks/use-auth";
 import { AccessToken } from "@/services/types/get-access-token-response.types";
 import { ResponseData } from "@/types/response.types";
+import { eventBus } from "@/utils/events";
 import axios, { InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 
@@ -117,17 +118,16 @@ axios_auth.interceptors.response.use(
       try {
         // Use axios_base to avoid sending the expired token
         const res = await axios_base.post<ResponseData<AccessToken>>(
-          "api/auth/refresh-token",
+          "auth/refresh-token",
           {
             refreshToken: localStorage.getItem("refreshToken"),
           }
         );
-
         if (res.status === 200) {
           // If the refresh token is valid
           const newToken = res.data.data?.accessToken;
           if (newToken) {
-            useAuth().updateAccessToken(newToken);
+            eventBus.publish("auth:token-refreshed", newToken);
             // Update the auth header for future requests
             axios_auth.defaults.headers.common[
               "Authorization"
@@ -140,24 +140,19 @@ axios_auth.interceptors.response.use(
             return axios_auth(originalConfig);
           }
         }
-
-        useAuth().signout();
-
+        eventBus.publish("auth:logout");
+        window.location.replace("/login");
         return response;
       } catch (error) {
         console.log("Interceptor Axios", error);
         // If the refresh token is invalid
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("account");
+        eventBus.publish("auth:logout");
         window.location.replace("/login");
         return response;
       }
     } else if (response.status === 423) {
       // If the account is locked
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("account");
+      eventBus.publish("auth:logout");
       toast.error("Tài khoản của bạn đã bị khóa");
       setTimeout(() => {
         window.location.replace("/login");
