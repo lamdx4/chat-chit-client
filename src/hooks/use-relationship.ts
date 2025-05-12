@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { GetFriendListRes } from "@/services/types/friend-list";
 import { ResponseData } from "@/types/response.types";
 import { CursorPaging } from "@/utils/paging-response";
@@ -69,6 +69,14 @@ export const useFriends = () => {
     }
   );
 };
+
+export function useUserRelationship(targetUserId: number | undefined) {
+  return useQuery({
+    queryKey: ["relationship", "get", targetUserId],
+    queryFn: () => RelationshipService.getUserRelationship(targetUserId!),
+    enabled: !!targetUserId, // Chỉ gọi API khi có targetUserId
+  });
+}
 
 // Type cho infinite query cache
 type InfiniteQueryData<T> = {
@@ -196,9 +204,12 @@ export function useRelationshipMutations() {
       if (ctx?.prevFriends)
         queryClient.setQueryData(["relationship", "list"], ctx.prevFriends);
     },
-    onSettled: () => {
+    onSettled: (_data, _error, targetUserId) => {
       queryClient.invalidateQueries({ queryKey: ["relationship", "requests"] });
       queryClient.invalidateQueries({ queryKey: ["relationship", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relationship", "get", targetUserId],
+      });
     },
   });
 
@@ -231,8 +242,11 @@ export function useRelationshipMutations() {
           ctx.prevRequests
         );
     },
-    onSettled: () => {
+    onSettled: (_data, _error, targetUserId) => {
       queryClient.invalidateQueries({ queryKey: ["relationship", "requests"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relationship", "get", targetUserId],
+      });
     },
   });
 
@@ -260,8 +274,11 @@ export function useRelationshipMutations() {
       if (ctx?.prevSent)
         queryClient.setQueryData(["relationship", "sent"], ctx.prevSent);
     },
-    onSettled: () => {
+    onSettled: (_data, _error, targetUserId) => {
       queryClient.invalidateQueries({ queryKey: ["relationship", "sent"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relationship", "get", targetUserId],
+      });
     },
   });
 
@@ -289,8 +306,11 @@ export function useRelationshipMutations() {
       if (ctx?.prevFriends)
         queryClient.setQueryData(["relationship", "list"], ctx.prevFriends);
     },
-    onSettled: () => {
+    onSettled: (_data, _error, targetUserId) => {
       queryClient.invalidateQueries({ queryKey: ["relationship", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relationship", "get", targetUserId],
+      });
     },
   });
 
@@ -355,9 +375,12 @@ export function useRelationshipMutations() {
       if (ctx?.prevFriends)
         queryClient.setQueryData(["relationship", "list"], ctx.prevFriends);
     },
-    onSettled: () => {
+    onSettled: (_data, _error, targetUserId) => {
       queryClient.invalidateQueries({ queryKey: ["relationship", "block"] });
       queryClient.invalidateQueries({ queryKey: ["relationship", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relationship", "get", targetUserId],
+      });
     },
   });
 

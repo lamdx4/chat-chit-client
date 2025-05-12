@@ -1,4 +1,15 @@
-import { MoreHorizontal, Users, Edit } from "lucide-react";
+import {
+  MoreHorizontal,
+  Users,
+  Edit,
+  CircleX,
+  Check,
+  Loader2,
+  MessageCircle,
+  Ban,
+  Share2,
+  UserX,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import userService from "@/services/user.service";
 import { useNavigate, useParams } from "react-router";
@@ -11,6 +22,22 @@ import { AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Separator } from "../ui/separator";
 import User from "@/types/user";
 import getUrlFile from "@/utils/get-url-file";
+import {
+  RelationDirection,
+  RelationType,
+} from "@/services/types/get-relationship-between-user";
+import {
+  useRelationshipMutations,
+  useUserRelationship,
+} from "@/hooks/use-relationship";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import copyableText from "@/utils/copy-to-clip-board";
+import { toast } from "sonner";
 
 export default function UserProfile() {
   const navigate = useNavigate();
@@ -20,7 +47,20 @@ export default function UserProfile() {
   const params = useParams();
   const userName = params.userName;
 
+  const {
+    acceptRequest,
+    blockUser,
+    rejectRequest,
+    removeFriend,
+    cancelSentRequest,
+  } = useRelationshipMutations();
+
   const isOwnProfile = auth.user?.userName === userName;
+
+  const { data, isPending, isSuccess } = useUserRelationship(
+    userInformation?.userId
+  );
+  const rel = data?.data.data;
 
   useEffect(() => {
     if (!userName) return;
@@ -41,6 +81,10 @@ export default function UserProfile() {
   }, [userName]);
 
   if (!userName) {
+    return <NotFoundElement />;
+  }
+
+  if (isSuccess && rel?.relationship === RelationType.Block) {
     return <NotFoundElement />;
   }
 
@@ -91,13 +135,116 @@ export default function UserProfile() {
                 </Button>
               ) : (
                 <>
-                  <Button variant="secondary">Message</Button>
-                  <Button variant="secondary" size="icon">
-                    <Users className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  {isPending ? <Loader2 className="animate-spin" /> : <></>}
+                  {isSuccess && rel ? (
+                    (() => {
+                      switch (rel.relationship) {
+                        case RelationType.Friend:
+                          return (
+                            <>
+                              <Button variant="secondary">
+                                <Users className="h-4 w-4" />
+                                Friend
+                              </Button>
+                            </>
+                          );
+                        case RelationType.Pending:
+                          return rel.direction === RelationDirection.Sender ? (
+                            <>
+                              {" "}
+                              <Button variant="secondary" disabled>
+                                Request Sent
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  cancelSentRequest.mutate(
+                                    userInformation.userId
+                                  );
+                                }}
+                                variant="secondary"
+                              >
+                                <CircleX className="h-4 w-4 mr-2" />
+                                Cancel Request Sent
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                onClick={() => {
+                                  rejectRequest.mutate(userInformation.userId);
+                                }}
+                                variant="secondary"
+                              >
+                                <CircleX className="h-4 w-4 mr-2" />
+                                Reject Request
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  acceptRequest.mutate(userInformation.userId);
+                                }}
+                              >
+                                <Check className="h-4 w-4 mr-2" />
+                                Accept Request
+                              </Button>
+                            </>
+                          );
+                        default:
+                          return (
+                            <Button variant="secondary">Add Friend</Button>
+                          );
+                      }
+                    })()
+                  ) : (
+                    <Button variant="secondary">Add Friend</Button>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      <DropdownMenuItem>
+                        <MessageCircle></MessageCircle>
+                        <span className="ml-2">Message</span>
+                      </DropdownMenuItem>
+                      {rel?.relationship === RelationType.Friend ? (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            removeFriend.mutate(userInformation.userId);
+                          }}
+                        >
+                          <UserX></UserX>
+                          <span className="ml-2">Remove Friend</span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <></>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          blockUser.mutate(userInformation.userId);
+                        }}
+                      >
+                        <Ban></Ban>
+                        <span className="ml-2">Block</span>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => {
+                          copyableText(window.location.href)
+                            .then(() => {
+                              toast.success("Link copied to clipboard");
+                            })
+                            .catch(() => {
+                              toast.warning("Failed to copy link");
+                            });
+                        }}
+                      >
+                        <Share2></Share2>
+                        <span className="ml-2">Share</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
             </div>

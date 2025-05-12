@@ -2,6 +2,7 @@ import { axios_auth } from "@/config/axios-auth";
 import { ResponseData } from "@/types/response.types";
 import { GetFriendListRes } from "./types/friend-list";
 import { CursorPaging } from "@/utils/paging-response";
+import { GetRelationshipBetweenUser } from "./types/get-relationship-between-user";
 
 export const RelationshipService = {
   rejectFriendRequest: (targetUserId: number) =>
@@ -46,26 +47,46 @@ export const RelationshipService = {
 
   getFriendList: (cursor?: number) =>
     axios_auth.get<ResponseData<CursorPaging<GetFriendListRes, number>>>(
-      `/user/relationship/friend?cursor=${
-        cursor ?? Number.MAX_SAFE_INTEGER
-      }&limit=10`
+      `/user/relationship/friend`,
+      {
+        params: {
+          cursor: cursor ?? Number.MAX_SAFE_INTEGER,
+          limit: 10,
+        },
+      }
     ),
   getFriendRequestList: (cursor?: number) =>
     axios_auth.get<ResponseData<CursorPaging<GetFriendListRes, number>>>(
-      `user/relationship/friend-request-list?${
-        "cursor=" + (cursor ?? Number.MAX_SAFE_INTEGER)
-      }&limit=10`
+      `user/relationship/friend-request-list`,
+      {
+        params: {
+          cursor: cursor ?? Number.MAX_SAFE_INTEGER,
+          limit: 10,
+        },
+      }
     ),
   getSentRequestList: (cursor?: number) =>
     axios_auth.get<ResponseData<CursorPaging<GetFriendListRes, number>>>(
-      `/user/relationship/friend/friend-request-sent-list?cursor=${
-        cursor ?? Number.MAX_SAFE_INTEGER
-      }&limit=10`
+      `/user/relationship/friend/friend-request-sent-list`,
+      {
+        params: {
+          cursor: cursor ?? Number.MAX_SAFE_INTEGER,
+          limit: 10,
+        },
+      }
     ),
   getBlockList: (cursor?: number) =>
     axios_auth.get<ResponseData<CursorPaging<GetFriendListRes, number>>>(
-      `/user/relationship/block?cursor=${
-        cursor ?? Number.MAX_SAFE_INTEGER
-      }&limit=10`
+      `/user/relationship/block`,
+      {
+        params: {
+          cursor: cursor ?? Number.MAX_SAFE_INTEGER,
+          limit: 10,
+        },
+      }
+    ),
+  getUserRelationship: (targetUserId: number) =>
+    axios_auth.get<ResponseData<GetRelationshipBetweenUser>>(
+      `/user/relationship/get/${targetUserId}`
     ),
 };
