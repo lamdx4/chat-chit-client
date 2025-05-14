@@ -413,7 +413,50 @@ export function useRelationshipMutations() {
     },
   });
 
+  const sendFriendRequest = useMutation({
+    mutationFn: RelationshipService.sendFriendRequest,
+    onMutate: async (targetUserId: number) => {
+      await queryClient.cancelQueries({ queryKey: ["relationship", "sent"] });
+
+      const prevSent = queryClient.getQueryData<ResponseData<GetFriendListRes>>([
+        "relationship",
+        "get",
+        targetUserId,
+      ]);
+
+      // Tìm user vừa accept để add vào 
+      const userAdded: GetFriendListRes | undefined = prevSent?.data;
+
+      if (userAdded) {
+        queryClient.setQueryData(
+          ["relationship", "sent"],
+          (
+            old:
+              | InfiniteQueryData<
+                  ResponseData<CursorPaging<GetFriendListRes, number>>
+                >
+              | undefined
+          ) => updateInfiniteAddUser(old, userAdded!)
+        );
+      }
+
+      return { prevSent };
+    },
+    onError: (_err, _targetUserId, ctx) => {
+      console.log("error", _err);
+      if (ctx?.prevSent)
+        queryClient.setQueryData(["relationship", "sent"], ctx.prevSent);
+    },
+    onSettled: (_data, _error, targetUserId) => {
+      queryClient.invalidateQueries({ queryKey: ["relationship", "sent"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relationship", "get", targetUserId],
+      });
+    },
+  });
+
   return {
+    sendFriendRequest,
     acceptRequest,
     rejectRequest,
     cancelSentRequest,

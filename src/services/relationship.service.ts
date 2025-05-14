@@ -5,6 +5,14 @@ import { CursorPaging } from "@/utils/paging-response";
 import { GetRelationshipBetweenUser } from "./types/get-relationship-between-user";
 
 export const RelationshipService = {
+  sendFriendRequest: (targetUserId: number) =>
+    axios_auth.post<ResponseData<unknown>>(
+      "/user/relationship/send-friend-request",
+      {
+        targetUserId,
+      }
+    ),
+
   rejectFriendRequest: (targetUserId: number) =>
     axios_auth.post<ResponseData<unknown>>(
       "/user/relationship/reject-request-friend",

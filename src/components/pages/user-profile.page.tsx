@@ -9,6 +9,7 @@ import {
   Ban,
   Share2,
   UserX,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import userService from "@/services/user.service";
@@ -48,6 +49,7 @@ export default function UserProfile() {
   const userName = params.userName;
 
   const {
+    sendFriendRequest,
     acceptRequest,
     blockUser,
     rejectRequest,
@@ -190,12 +192,21 @@ export default function UserProfile() {
                           );
                         default:
                           return (
-                            <Button variant="secondary">Add Friend</Button>
+                            <Button
+                              onClick={() => {
+                                sendFriendRequest.mutate(
+                                  userInformation.userId
+                                );
+                              }}
+                              variant="secondary"
+                            >
+                              <UserPlus></UserPlus> Add Friend
+                            </Button>
                           );
                       }
                     })()
                   ) : (
-                    <Button variant="secondary">Add Friend</Button>
+                    <></>
                   )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
