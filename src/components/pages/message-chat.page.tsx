@@ -11,10 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import ChatDetailsPanel from "../elements/chat-details-panel";
+import { CreateGroupChatDialog } from "../elements/create-group-dialog";
 
 export default function MessageChat() {
   const { selectedGroupId, isFirstLoadGroup } = useContext(ChatContext);
   const [showChatDetails, setShowChatDetails] = useState(false);
+  const [isOpenCreateGroupDialog, setIsOpenCreateGroupDialog] = useState(false);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-10 h-full gap-3 ">
@@ -34,7 +36,11 @@ export default function MessageChat() {
                 <CirclePlus />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
-                <DropdownMenuItem>Create new group</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsOpenCreateGroupDialog(true)}
+                >
+                  Create new group
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -93,6 +99,10 @@ export default function MessageChat() {
           />
         </div>
       )}
+      <CreateGroupChatDialog
+        open={isOpenCreateGroupDialog}
+        setOpen={setIsOpenCreateGroupDialog}
+      ></CreateGroupChatDialog>
     </div>
   );
 }
