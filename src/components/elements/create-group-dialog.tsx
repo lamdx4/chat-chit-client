@@ -26,17 +26,17 @@ export function CreateGroupChatDialog({
   setOpen: (open: boolean) => void;
 }) {
   const [conversationName, setConversationName] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [selectedFriends, setSelectedFriends] = useState<GetFriendListRes[]>(
     []
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useFriends();
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useFriends(searchTerm);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+    setSearchTerm(e.target.value);
   };
 
   const toggleFriendSelection = (friend: GetFriendListRes) => {
@@ -82,7 +82,7 @@ export function CreateGroupChatDialog({
   const resetForm = () => {
     setConversationName("");
     setSelectedFriends([]);
-    setSearchQuery("");
+    setSearchTerm("");
     // setPage(0);
     // setHasMore(true);
     setError(null);
@@ -149,7 +149,7 @@ export function CreateGroupChatDialog({
                   id="friend-search"
                   placeholder="Search by name"
                   className="pl-8"
-                  value={searchQuery}
+                  value={searchTerm}
                   onChange={handleSearchChange}
                 />
               </div>
@@ -160,7 +160,7 @@ export function CreateGroupChatDialog({
               <div className="p-2 space-y-1">
                 {data?.pages.length === 0 ? (
                   <div className="text-center py-4 text-gray-500">
-                    {searchQuery
+                    {searchTerm
                       ? "No friends found matching your search"
                       : "No friends available"}
                   </div>

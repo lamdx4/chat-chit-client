@@ -53,13 +53,14 @@ export const RelationshipService = {
       targetUserId,
     }),
 
-  getFriendList: (cursor?: number) =>
+  getFriendList: (cursor?: number, searchTerm: string = "") =>
     axios_auth.get<ResponseData<CursorPaging<GetFriendListRes, number>>>(
       `/user/relationship/friend`,
       {
         params: {
           cursor: cursor ?? Number.MAX_SAFE_INTEGER,
           limit: 10,
+          searchTerm: searchTerm ?? "",
         },
       }
     ),

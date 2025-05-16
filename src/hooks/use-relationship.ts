@@ -54,13 +54,14 @@ export const useSentRequests = () => {
   );
 };
 
-export const useFriends = () => {
+export const useFriends = (searchTerm: string = "") => {
   return useInfiniteQuery<ResponseData<CursorPaging<GetFriendListRes, number>>>(
     {
-      queryKey: ["relationship", "list"],
+      queryKey: ["relationship", "list", searchTerm],
       queryFn: async ({ pageParam }) => {
         const response = await RelationshipService.getFriendList(
-          pageParam as number
+          pageParam as number,
+          searchTerm
         );
         return response.data;
       },
@@ -418,13 +419,11 @@ export function useRelationshipMutations() {
     onMutate: async (targetUserId: number) => {
       await queryClient.cancelQueries({ queryKey: ["relationship", "sent"] });
 
-      const prevSent = queryClient.getQueryData<ResponseData<GetFriendListRes>>([
-        "relationship",
-        "get",
-        targetUserId,
-      ]);
+      const prevSent = queryClient.getQueryData<ResponseData<GetFriendListRes>>(
+        ["relationship", "get", targetUserId]
+      );
 
-      // Tìm user vừa accept để add vào 
+      // Tìm user vừa accept để add vào
       const userAdded: GetFriendListRes | undefined = prevSent?.data;
 
       if (userAdded) {
