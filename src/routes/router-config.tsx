@@ -41,7 +41,7 @@ const appRouterConfig: RouteObject[] = [
           <ChatProvider>
             <MainLayout />
           </ChatProvider>
-        } 
+        }
       />
     ),
     children: [
