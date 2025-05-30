@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import userService from "@/services/user.service";
+import { userService } from "@/services/user.service";
 import { useNavigate, useParams } from "react-router";
 import { useState, useEffect } from "react";
 import NotFoundElement from "../elements/not-found.element";

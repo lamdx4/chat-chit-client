@@ -6,28 +6,17 @@ import PagingData from "./types/paging-data";
 import { Member } from "@/types/member.model";
 import { SentMessageDto } from "./types/sent-message-dto";
 
-class ChatService {
-  private static instance: ChatService;
-
-  private constructor() {}
-
-  public static getInstance(): ChatService {
-    if (!ChatService.instance) {
-      ChatService.instance = new ChatService();
-    }
-    return ChatService.instance;
-  }
-
-  public async getGroupList(cursorId: number, limit: number) {
+export const chatService = {
+  async getGroupList(cursorId: number, limit: number) {
     return axios_auth.get<ResponseData<PagingData<Group>>>("/group", {
       params: {
         cursor: cursorId,
         limit: limit,
       },
     });
-  }
+  },
 
-  public async deleteGroup(groupId: number) {
+  async deleteGroup(groupId: number) {
     try {
       const response = await fetch(`http://localhost:3000/chat/${groupId}`, {
         method: "DELETE",
@@ -37,13 +26,9 @@ class ChatService {
     } catch (error) {
       console.error(error);
     }
-  }
+  },
 
-  public async getMessageList(
-    groupId: number,
-    cursorId: number,
-    limit: number
-  ) {
+  async getMessageList(groupId: number, cursorId: number, limit: number) {
     try {
       const response = await axios_auth.get<ResponseData<PagingData<Message>>>(
         `http://localhost:3000/message/${groupId}`,
@@ -59,7 +44,7 @@ class ChatService {
       console.error(error);
       return [];
     }
-  }
+  },
 
   /**
    * Sends a message to a specified group.
@@ -67,10 +52,8 @@ class ChatService {
    * @param groupId - The ID of the group to which the message will be sent.
    * @param message - The message object containing the content to be sent.
    * @returns A promise that resolves to the response data from the server.
-   *
-   * @throws Will log an error to the console if the request fails.
    */
-  public async sendMessage(
+  async sendMessage(
     groupId: number,
     message: SentMessageDto
   ): Promise<Message | null> {
@@ -84,9 +67,9 @@ class ChatService {
       console.error(error);
       return null;
     }
-  }
+  },
 
-  public async createGroup() {
+  async createGroup() {
     try {
       const response = await fetch(`http://localhost:3000/chat/`, {
         method: "POST",
@@ -100,9 +83,9 @@ class ChatService {
     } catch (error) {
       console.error(error);
     }
-  }
+  },
 
-  public async getInfoGroup(groupId: number) {
+  async getInfoGroup(groupId: number) {
     try {
       const res = await axios_auth.get<ResponseData<Group>>(
         `/group/${groupId}/community-group`
@@ -112,9 +95,9 @@ class ChatService {
       console.error(error);
       return null;
     }
-  }
+  },
 
-  public async getInfoMember(groupId: number, userId: number) {
+  async getInfoMember(groupId: number, userId: number) {
     try {
       const res = await axios_auth.get<ResponseData<Member>>(
         `/group/${groupId}/member/${userId}`
@@ -124,7 +107,5 @@ class ChatService {
       console.error(error);
       return null;
     }
-  }
-}
-
-export const chatService = ChatService.getInstance();
+  },
+};
