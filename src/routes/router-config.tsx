@@ -13,6 +13,7 @@ import ForgotPassword from "@/components/pages/forgot-password.page";
 import OuterLayout from "@/components/layouts/x.layout";
 import SettingPage from "@/components/pages/setting.page";
 import LinkGoogleCallbackPage from "@/components/pages/link-sucess.page";
+import StoryPage from "@/components/pages/story.page";
 
 const appRouterConfig: RouteObject[] = [
   {
@@ -39,7 +40,7 @@ const appRouterConfig: RouteObject[] = [
       <ProtectedRouteAuth
         element={
           <ChatProvider>
-            <MainLayout />
+          <MainLayout />
           </ChatProvider>
         }
       />
@@ -53,6 +54,11 @@ const appRouterConfig: RouteObject[] = [
         path: "message",
         element: <MessageChat />,
       },
+      {
+        path: "story",
+        element: <StoryPage />,
+      },
+
       {
         path: "profile/:userName",
         element: <UserProfile />,

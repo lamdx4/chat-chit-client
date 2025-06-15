@@ -2,29 +2,15 @@
 
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, ChevronLeft, ChevronRight, Heart, Send, Pause, Play, Volume2, VolumeX } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, Heart, Pause, Play, Volume2, VolumeX } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {StoryUserWithItems } from "@/types/story"
 
-interface StoryItem {
-  id: string
-  type: "image" | "video"
-  url: string
-  duration: number
-  timestamp: string
-}
 
-interface StoryUser {
-  id: string
-  name: string
-  avatar: string
-  stories: StoryItem[]
-  isViewed?: boolean
-}
 
 interface StoryViewerProps {
-  stories: StoryUser[]
+  stories: StoryUserWithItems[]
   initialUserIndex: number
   initialStoryIndex: number
   onClose: () => void
@@ -43,7 +29,6 @@ export function StoryViewer({
   const [progress, setProgress] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
-  const [replyText, setReplyText] = useState("")
   const [showReactions, setShowReactions] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -52,7 +37,7 @@ export function StoryViewer({
 
   const currentUser = stories[currentUserIndex]
   const currentStory = currentUser?.stories[currentStoryIndex]
-  const storyDuration = currentStory?.duration || 5000
+  const storyDuration = currentStory?.type === "image" ? 5000 : 10000
 
   // Auto-advance story
   useEffect(() => {
@@ -90,13 +75,17 @@ export function StoryViewer({
     }
   }, [currentStory, isPaused, isMuted])
 
+  // Call onStoryChange when currentUserIndex or currentStoryIndex changes
+  useEffect(() => {
+    onStoryChange?.(currentUserIndex, currentStoryIndex)
+  }, [currentUserIndex, currentStoryIndex, onStoryChange])
+
   const nextStory = useCallback(() => {
     const nextStoryIndex = currentStoryIndex + 1
 
     if (nextStoryIndex < currentUser.stories.length) {
       setCurrentStoryIndex(nextStoryIndex)
       setProgress(0)
-      onStoryChange?.(currentUserIndex, nextStoryIndex)
     } else {
       // Move to next user
       const nextUserIndex = currentUserIndex + 1
@@ -104,12 +93,11 @@ export function StoryViewer({
         setCurrentUserIndex(nextUserIndex)
         setCurrentStoryIndex(0)
         setProgress(0)
-        onStoryChange?.(nextUserIndex, 0)
       } else {
         onClose()
       }
     }
-  }, [currentUserIndex, currentStoryIndex, currentUser, stories, onClose, onStoryChange])
+  }, [currentUserIndex, currentStoryIndex, currentUser, stories, onClose])
 
   const previousStory = useCallback(() => {
     const prevStoryIndex = currentStoryIndex - 1
@@ -117,7 +105,6 @@ export function StoryViewer({
     if (prevStoryIndex >= 0) {
       setCurrentStoryIndex(prevStoryIndex)
       setProgress(0)
-      onStoryChange?.(currentUserIndex, prevStoryIndex)
     } else {
       // Move to previous user
       const prevUserIndex = currentUserIndex - 1
@@ -126,10 +113,9 @@ export function StoryViewer({
         setCurrentUserIndex(prevUserIndex)
         setCurrentStoryIndex(prevUser.stories.length - 1)
         setProgress(0)
-        onStoryChange?.(prevUserIndex, prevUser.stories.length - 1)
       }
     }
-  }, [currentUserIndex, currentStoryIndex, stories, onStoryChange])
+  }, [currentUserIndex, currentStoryIndex, stories])
 
   // Touch handlers for mobile navigation
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -174,13 +160,6 @@ export function StoryViewer({
     }
   }
 
-  const handleReply = () => {
-    if (replyText.trim()) {
-      console.log("Reply sent:", replyText)
-      setReplyText("")
-    }
-  }
-
   const handleReaction = (reaction: string) => {
     console.log("Reaction sent:", reaction)
     setShowReactions(false)
@@ -192,8 +171,8 @@ export function StoryViewer({
     const diffInHours = Math.floor((now.getTime() - storyTime.getTime()) / (1000 * 60 * 60))
 
     if (diffInHours < 1) return "now"
-    if (diffInHours < 24) return `${diffInHours}h`
-    return `${Math.floor(diffInHours / 24)}d`
+    if (diffInHours >= 24) return "24h"
+    return `${diffInHours}h`
   }
 
   if (!currentUser || !currentStory) return null
@@ -204,11 +183,11 @@ export function StoryViewer({
       <div className="absolute inset-0 bg-black/90" />
 
       {/* Story content */}
-      <div className="relative w-full h-full max-w-md mx-auto">
+      <div className="relative w-full h-full max-w-lg mx-auto">
         {/* Progress bars */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex gap-1">
+        <div className="absolute top-6 left-6 right-6 z-20 flex gap-2">
           {currentUser.stories.map((_, index) => (
-            <div key={index} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
+            <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
               <div
                 className="h-full bg-white transition-all duration-100"
                 style={{
@@ -220,63 +199,63 @@ export function StoryViewer({
         </div>
 
         {/* Header */}
-        <div className="absolute top-8 left-4 right-4 z-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8 border-2 border-white">
+        <div className="absolute top-12 left-6 right-6 z-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16 border-2 border-white">
               <AvatarImage src={currentUser.avatar || "/placeholder.svg"} />
-              <AvatarFallback>{currentUser.name[0]}</AvatarFallback>
+              <AvatarFallback className="text-xl">{currentUser.userName[0]}</AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-white font-medium text-sm">{currentUser.name}</p>
-              <p className="text-white/70 text-xs">{formatTimeAgo(currentStory.timestamp)}</p>
+              <p className="text-white font-medium text-xl">{currentUser.userName}</p>
+              <p className="text-white/70 text-lg">{formatTimeAgo(currentStory.createdAt)}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {currentStory.type === "video" && (
               <>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="h-12 w-12 text-white hover:bg-white/20"
                   onClick={() => setIsPaused(!isPaused)}
                 >
-                  {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                  {isPaused ? <Play className="h-10 w-10" /> : <Pause className="h-10 w-10" />}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="h-12 w-12 text-white hover:bg-white/20"
                   onClick={() => setIsMuted(!isMuted)}
                 >
-                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  {isMuted ? <VolumeX className="h-10 w-10" /> : <Volume2 className="h-10 w-10" />}
                 </Button>
               </>
             )}
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20" onClick={onClose}>
-              <X className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-12 w-12 text-white hover:bg-white/20" onClick={onClose}>
+              <X className="h-10 w-10" />
             </Button>
           </div>
         </div>
 
         {/* Story media */}
         <div
-          className="w-full h-full flex items-center justify-center cursor-pointer"
+          className="w-full h-full flex items-center justify-center cursor-pointer px-6"
           onClick={handleClick}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
           {currentStory.type === "image" ? (
             <img
-              src={currentStory.url || "/placeholder.svg"}
+              src={currentStory.content || "/placeholder.svg"}
               alt="Story"
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full object-contain rounded-lg"
             />
           ) : (
             <video
               ref={videoRef}
-              src={currentStory.url}
-              className="max-w-full max-h-full object-contain"
+              src={currentStory.content || "/placeholder.mp4"}
+              className="max-w-full max-h-full object-contain rounded-lg"
               loop
               playsInline
             />
@@ -289,10 +268,10 @@ export function StoryViewer({
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 text-white hover:bg-white/20"
+              className="absolute left-6 top-1/2 -translate-y-1/2 h-16 w-16 text-white hover:bg-white/20"
               onClick={previousStory}
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="h-12 w-12" />
             </Button>
           ) : null}
 
@@ -300,23 +279,23 @@ export function StoryViewer({
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 text-white hover:bg-white/20"
+              className="absolute right-6 top-1/2 -translate-y-1/2 h-16 w-16 text-white hover:bg-white/20"
               onClick={nextStory}
             >
-              <ChevronRight className="h-6 w-6" />
+              <ChevronRight className="h-12 w-12" />
             </Button>
           ) : null}
         </div>
 
         {/* Bottom actions */}
-        <div className="absolute bottom-4 left-4 right-4 z-20">
+        <div className="absolute bottom-6 left-6 right-6 z-20">
           {/* Reactions */}
           {showReactions && (
-            <div className="mb-4 flex justify-center gap-2 bg-black/50 rounded-full p-2">
+            <div className="mb-6 flex justify-center gap-4 bg-black/50 rounded-full p-4">
               {["❤️", "😂", "😮", "😢", "😡", "👍"].map((emoji) => (
                 <button
                   key={emoji}
-                  className="text-2xl hover:scale-110 transition-transform"
+                  className="text-5xl hover:scale-110 transition-transform"
                   onClick={() => handleReaction(emoji)}
                 >
                   {emoji}
@@ -325,36 +304,16 @@ export function StoryViewer({
             </div>
           )}
 
-          {/* Reply input */}
-          <div className="flex items-center gap-2">
+          {/* Heart button only */}
+          <div className="flex justify-center">
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 text-white hover:bg-white/20"
+              className="h-14 w-14 text-white hover:bg-white/20"
               onClick={() => setShowReactions(!showReactions)}
             >
-              <Heart className="h-5 w-5" />
+              <Heart className="h-10 w-10" />
             </Button>
-
-            <div className="flex-1 flex items-center gap-2 bg-black/50 rounded-full px-4 py-2">
-              <Input
-                placeholder={`Reply to ${currentUser.name}...`}
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                className="border-0 bg-transparent text-white placeholder:text-white/70 focus-visible:ring-0"
-                onKeyDown={(e) => e.key === "Enter" && handleReply()}
-              />
-              {replyText && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
-                  onClick={handleReply}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       </div>

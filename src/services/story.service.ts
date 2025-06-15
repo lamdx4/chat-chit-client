@@ -1,0 +1,62 @@
+import { axios_auth } from "@/config/axios-auth";
+import { Story, StoryUser, StoryUserWithItems} from "@/types/story";
+import { ResponseData } from "@/types/response.types";
+
+
+export async function createStory({
+  file,
+  text,
+  visibility = 0,
+}: {
+  file: File;
+  text?: string;
+  visibility?: number;
+}): Promise<Story | null> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (text) formData.append("text", text);
+  formData.append("visibility", String(visibility ?? 0));
+
+  try {
+    const res = await axios_auth.post<ResponseData<Story>>("/story", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return res.data.data ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+export async function getFriendsStories(): Promise<StoryUser[]> {
+  try {
+    const res = await axios_auth.get<ResponseData<StoryUser[]>>("/story/friends");
+    return res.data.data ?? [];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+
+export async function getFriendsStoriesList(): Promise<StoryUserWithItems[]> {
+  try {
+    const res = await axios_auth.get<ResponseData<StoryUserWithItems[]>>("/story/friends/list");
+    return res.data.data ?? [];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+
+export async function viewStory(storyId: number): Promise<boolean> {
+  try {
+    await axios_auth.post(`/story/${storyId}/view`);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
