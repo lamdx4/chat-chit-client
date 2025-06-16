@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Plus, Play } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -127,13 +125,26 @@ export function StoryList() {
         // Find the original user index in the full stories array
         const originalUserIndex = stories.findIndex(user => user.userId === storiesWithContent[userIndex].userId);
         
-        // Update local state to mark as viewed
+        // Update local state to mark the specific story as viewed
         setStories(prev => 
-          prev.map((user, idx) => 
-            idx === originalUserIndex 
-              ? { ...user, isViewed: true }
-              : user
-          )
+          prev.map((user, idx) => {
+            if (idx === originalUserIndex) {
+              // Update the specific story's isViewed status
+              const updatedStories = user.stories.map((story, sIdx) => 
+                sIdx === storyIndex ? { ...story, isViewed: true } : story
+              );
+              
+              // Check if all stories are now viewed
+              const allStoriesViewed = updatedStories.every(story => story.isViewed);
+              
+              return {
+                ...user,
+                stories: updatedStories,
+                isViewed: allStoriesViewed
+              };
+            }
+            return user;
+          })
         );
       } catch (error) {
         console.error("Failed to mark story as viewed:", error);
@@ -142,17 +153,22 @@ export function StoryList() {
   };
 
   const formatTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const storyTime = new Date(timestamp);
-    const diffInMinutes = Math.floor(
-      (now.getTime() - storyTime.getTime()) / (1000 * 60)
-    );
+    const now = new Date()
+    const storyTime = new Date(timestamp)
+    // Add 7 hours to the story time
+    storyTime.setHours(storyTime.getHours() + 7)
+    
+    const diffInMilliseconds = now.getTime() - storyTime.getTime()
+    const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60))
+    const diffInHours = Math.floor(diffInMilliseconds / (1000 * 60 * 60))
 
-    if (diffInMinutes < 60) return `${diffInMinutes}m`;
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}h`;
-    return `${Math.floor(diffInHours / 24)}d`;
-  };
+    if (diffInHours < 1) {
+      if (diffInMinutes < 1) return "now"
+      return `${diffInMinutes}m`
+    }
+    if (diffInHours >= 24) return "24h"
+    return `${diffInHours}h`
+  }
 
   if (loading) {
     return (

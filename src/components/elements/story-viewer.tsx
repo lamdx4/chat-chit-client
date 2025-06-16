@@ -168,9 +168,17 @@ export function StoryViewer({
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
     const storyTime = new Date(timestamp)
-    const diffInHours = Math.floor((now.getTime() - storyTime.getTime()) / (1000 * 60 * 60))
+    // Add 7 hours to the story time
+    storyTime.setHours(storyTime.getHours() + 7)
+    
+    const diffInMilliseconds = now.getTime() - storyTime.getTime()
+    const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60))
+    const diffInHours = Math.floor(diffInMilliseconds / (1000 * 60 * 60))
 
-    if (diffInHours < 1) return "now"
+    if (diffInHours < 1) {
+      if (diffInMinutes < 1) return "now"
+      return `${diffInMinutes}m`
+    }
     if (diffInHours >= 24) return "24h"
     return `${diffInHours}h`
   }

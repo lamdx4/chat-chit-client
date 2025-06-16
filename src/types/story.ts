@@ -24,6 +24,7 @@ export interface StoryItem {
   content: string;
   text?: string;
   createdAt: string;
+  isViewed: boolean;
 }
 
 export interface StoryUserWithItems {
