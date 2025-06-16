@@ -60,3 +60,13 @@ export async function viewStory(storyId: number): Promise<boolean> {
   }
 }
 
+export async function getUserStories(userId?: number): Promise<StoryUserWithItems | null> {
+  try {
+    const endpoint = userId ? `/story/user/${userId}` : '/story/user/c';
+    const res = await axios_auth.get<ResponseData<StoryUserWithItems>>(endpoint);
+    return res.data.data ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}

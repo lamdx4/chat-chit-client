@@ -4,12 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { StoryViewer } from "./story-viewer";
 import { StoryCreate } from "@/components/elements/story-create";
-import { createStory, getFriendsStoriesList, viewStory } from "@/services/story.service";
+import { createStory, getFriendsStoriesList, viewStory, getUserStories } from "@/services/story.service";
 import { toast } from "sonner";
 import {StoryUserWithItems } from "@/types/story";
 
 
 export function StoryList() {
+  
   const [openCreate, setOpenCreate] = useState(false);
   const [selectedStory, setSelectedStory] = useState<{
     userIndex: number;
@@ -22,28 +23,33 @@ export function StoryList() {
   useEffect(() => {
     const fetchStories = async () => {
       try {
-        const friendsStories = await getFriendsStoriesList();
+        const [userStories, friendsStories] = await Promise.all([
+          getUserStories(),
+          getFriendsStoriesList()
+        ]);
 
-        // Convert API response to component format
+
+        // Convert API response to component format with "Your Story" as first item
         const convertedStories: StoryUserWithItems[] = [
           // Add "Your Story" as first item
           {
-            userId: 1,
+            userId: 0,
             userName: "Your Story",
             avatar: "/placeholder.svg",
-            stories: [],
-            isViewed: false,
+            stories: userStories?.stories || [],
+            isViewed: userStories?.isViewed || false,
           },
           // Add friends' stories
           ...friendsStories.map((friend: StoryUserWithItems) => ({
             userId: friend.userId,
             userName: friend.userName,
             avatar: friend.avatar || "/placeholder.svg",
-            stories: friend.stories, // Will be populated when we have detailed story data
+            stories: friend.stories,
             isViewed: friend.isViewed,
-          })),
+          }))
         ];
 
+        console.log('Converted stories:', convertedStories);
         setStories(convertedStories);
       } catch (error) {
         console.error("Failed to fetch stories:", error);
@@ -62,24 +68,26 @@ export function StoryList() {
     if (result) {
       toast.success("Story created successfully!");
       // Refresh story list after creating new story
-      const friendsStories = await getFriendsStoriesList();
+      const [userStories, friendsStories] = await Promise.all([
+        getUserStories(),
+        getFriendsStoriesList()
+      ]);
+      
       const convertedStories: StoryUserWithItems[] = [
-        // Add "Your Story" as first item
         {
-          userId: 1,
+          userId: 0,
           userName: "Your Story",
           avatar: "/placeholder.svg",
-          stories: [],
+          stories: userStories?.stories || [],
           isViewed: false,
         },
-        // Add friends' stories
         ...friendsStories.map((friend: StoryUserWithItems) => ({
           userId: friend.userId,
           userName: friend.userName,
           avatar: friend.avatar || "/placeholder.svg",
-          stories: friend.stories, // Will be populated when we have detailed story data
+          stories: friend.stories,
           isViewed: friend.isViewed,
-        })),
+        }))
       ];
       setStories(convertedStories);
     } else {
@@ -89,22 +97,50 @@ export function StoryList() {
   };
 
   const handleStoryClick = async (userIndex: number, storyIndex = 0) => {
-    // Skip if it's "Your Story" and has no stories
+    // If it's "Your Story" and has no stories, open create modal
     if (userIndex === 0 && stories[0].stories.length === 0) {
-      // Handle create story action
-      console.log("Create new story");
+      setOpenCreate(true);
       return;
     }
 
     setSelectedStory({ userIndex, storyIndex });
+    
     const currentStory = stories[userIndex]?.stories[storyIndex];
-    if (currentStory) {
+    
+    if (currentStory && !currentStory.isViewed) {
       try {
         await viewStory(currentStory.storyId);
+        
+        // Update local state to mark the specific story as viewed
+        setStories(prev => 
+          prev.map((user, idx) => {
+            if (idx === userIndex) {
+              // Update the specific story's isViewed status
+              const updatedStories = user.stories.map((story, sIdx) => 
+                sIdx === storyIndex ? { ...story, isViewed: true } : story
+              );
+              
+              // Check if all stories are now viewed
+              const allStoriesViewed = updatedStories.every(story => story.isViewed);
+              
+              return {
+                ...user,
+                stories: updatedStories,
+                isViewed: allStoriesViewed
+              };
+            }
+            return user;
+          })
+        );
       } catch (error) {
         console.error("Failed to mark story as viewed:", error);
       }
     }
+  };
+
+  const handlePlusClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering handleStoryClick
+    setOpenCreate(true);
   };
 
   const handleStoryClose = () => {
@@ -114,21 +150,16 @@ export function StoryList() {
   const handleStoryChange = async (userIndex: number, storyIndex: number) => {
     setSelectedStory({ userIndex, storyIndex });
     
-    // Get the filtered stories (only users with stories)
-    const storiesWithContent = stories.filter((user) => user.stories.length > 0);
-    const currentStory = storiesWithContent[userIndex]?.stories[storyIndex];
+    const currentStory = stories[userIndex]?.stories[storyIndex];
     
-    if (currentStory) {
+    if (currentStory && !currentStory.isViewed) {
       try {
         await viewStory(currentStory.storyId);
-        
-        // Find the original user index in the full stories array
-        const originalUserIndex = stories.findIndex(user => user.userId === storiesWithContent[userIndex].userId);
         
         // Update local state to mark the specific story as viewed
         setStories(prev => 
           prev.map((user, idx) => {
-            if (idx === originalUserIndex) {
+            if (idx === userIndex) {
               // Update the specific story's isViewed status
               const updatedStories = user.stories.map((story, sIdx) => 
                 sIdx === storyIndex ? { ...story, isViewed: true } : story
@@ -189,38 +220,39 @@ export function StoryList() {
                 <div
                   key={user.userId}
                   className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0"
-                  onClick={() =>
-                    userIndex === 0 && user.stories.length === 0
-                      ? setOpenCreate(true)
-                      : handleStoryClick(userIndex)
-                  }
+                  onClick={() => handleStoryClick(userIndex)}
                 >
                   <div className="relative">
                     {/* Story ring */}
                     <div
                       className={`p-1 rounded-full transition-all duration-200 ${
-                        user.stories.length > 0
-                          ? user.isViewed
+                        userIndex === 0
+                          ? user.stories.length === 0
+                            ? "bg-gray-200 group-hover:bg-gray-300"
+                            : user.isViewed
                             ? "bg-gray-300"
                             : "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400"
-                          : userIndex === 0
-                          ? "bg-gray-200 group-hover:bg-gray-300"
-                          : "bg-gray-200"
+                          : user.isViewed
+                          ? "bg-gray-300"
+                          : "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400"
                       }`}
                     >
                       <div className="p-1 bg-white rounded-full">
                         <Avatar className="h-16 w-16 lg:h-20 lg:w-20">
                           <AvatarImage src={user.avatar || "/placeholder.svg"} />
                           <AvatarFallback className="text-lg">
-                            {user.userName[0]}
+                            {userIndex === 0 ? "Y" : user.userName[0]}
                           </AvatarFallback>
                         </Avatar>
                       </div>
                     </div>
 
-                    {/* Add story button for user's own story */}
-                    {userIndex === 0 && user.stories.length === 0 && (
-                      <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1.5 group-hover:bg-blue-600 transition-colors">
+                    {/* Add story button for "Your Story" - always show */}
+                    {userIndex === 0 && (
+                      <div 
+                        className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1.5 group-hover:bg-blue-600 transition-colors"
+                        onClick={handlePlusClick}
+                      >
                         <Plus className="h-4 w-4 text-white" />
                       </div>
                     )}
@@ -232,10 +264,10 @@ export function StoryList() {
                     <p className="text-sm font-medium truncate max-w-[80px]">
                       {userIndex === 0 ? "Your Story" : user.userName}
                     </p>
-                    {user.stories.length > 0 && userIndex !== 0 && (
+                    {user.stories.length > 0 && (
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatTimeAgo(
-                          user.stories[user.stories.length - 1].createdAt
+                          user.stories[0].createdAt
                         )}
                       </p>
                     )}
@@ -255,36 +287,37 @@ export function StoryList() {
                 <div
                   key={user.userId}
                   className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0"
-                  onClick={() =>
-                    userIndex === 0 && user.stories.length === 0
-                      ? setOpenCreate(true)
-                      : handleStoryClick(userIndex)
-                  }
+                  onClick={() => handleStoryClick(userIndex)}
                 >
                   <div className="relative">
                     {/* Story ring */}
                     <div
                       className={`p-0.5 rounded-full ${
-                        user.stories.length > 0
-                          ? user.isViewed
+                        userIndex === 0
+                          ? user.stories.length === 0
+                            ? "bg-gray-200"
+                            : user.isViewed
                             ? "bg-gray-300"
                             : "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400"
-                          : userIndex === 0
-                          ? "bg-gray-200"
-                          : "bg-gray-200"
+                          : user.isViewed
+                          ? "bg-gray-300"
+                          : "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400"
                       }`}
                     >
                       <div className="p-0.5 bg-white rounded-full">
                         <Avatar className="h-14 w-14">
                           <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                          <AvatarFallback>{user.userName[0]}</AvatarFallback>
+                          <AvatarFallback>{userIndex === 0 ? "Y" : user.userName[0]}</AvatarFallback>
                         </Avatar>
                       </div>
                     </div>
 
-                    {/* Add story button for user's own story */}
-                    {userIndex === 0 && user.stories.length === 0 && (
-                      <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1">
+                    {/* Add story button for "Your Story" - always show */}
+                    {userIndex === 0 && (
+                      <div 
+                        className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1"
+                        onClick={handlePlusClick}
+                      >
                         <Plus className="h-3 w-3 text-white" />
                       </div>
                     )}
@@ -304,7 +337,7 @@ export function StoryList() {
                     <p className="text-xs font-medium truncate w-16">
                       {userIndex === 0 ? "Your Story" : user.userName}
                     </p>
-                    {user.stories.length > 0 && userIndex !== 0 && (
+                    {user.stories.length > 0 && (
                       <p className="text-xs text-gray-500">
                         {formatTimeAgo(
                           user.stories[user.stories.length - 1].createdAt
@@ -325,7 +358,9 @@ export function StoryList() {
         <StoryViewer
           stories={stories.filter((user) => user.stories.length > 0)}
           initialUserIndex={
-            selectedStory.userIndex === 0 ? 0 : selectedStory.userIndex - 1
+            selectedStory.userIndex === 0 
+              ? 0 // If "Your Story" has stories, it will be index 0 in filtered array
+              : stories.filter((user, idx) => idx < selectedStory.userIndex && user.stories.length > 0).length
           }
           initialStoryIndex={selectedStory.storyIndex}
           onClose={handleStoryClose}

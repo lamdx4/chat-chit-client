@@ -29,7 +29,8 @@ export function StoryViewer({
   const [progress, setProgress] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
-  const [showReactions, setShowReactions] = useState(false)
+  const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([])
+  const [isHeartLiked, setIsHeartLiked] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -75,17 +76,13 @@ export function StoryViewer({
     }
   }, [currentStory, isPaused, isMuted])
 
-  // Call onStoryChange when currentUserIndex or currentStoryIndex changes
-  useEffect(() => {
-    onStoryChange?.(currentUserIndex, currentStoryIndex)
-  }, [currentUserIndex, currentStoryIndex, onStoryChange])
-
   const nextStory = useCallback(() => {
     const nextStoryIndex = currentStoryIndex + 1
 
     if (nextStoryIndex < currentUser.stories.length) {
       setCurrentStoryIndex(nextStoryIndex)
       setProgress(0)
+      onStoryChange?.(currentUserIndex, nextStoryIndex)
     } else {
       // Move to next user
       const nextUserIndex = currentUserIndex + 1
@@ -93,11 +90,12 @@ export function StoryViewer({
         setCurrentUserIndex(nextUserIndex)
         setCurrentStoryIndex(0)
         setProgress(0)
+        onStoryChange?.(nextUserIndex, 0)
       } else {
         onClose()
       }
     }
-  }, [currentUserIndex, currentStoryIndex, currentUser, stories, onClose])
+  }, [currentUserIndex, currentStoryIndex, currentUser, stories, onClose, onStoryChange])
 
   const previousStory = useCallback(() => {
     const prevStoryIndex = currentStoryIndex - 1
@@ -105,6 +103,7 @@ export function StoryViewer({
     if (prevStoryIndex >= 0) {
       setCurrentStoryIndex(prevStoryIndex)
       setProgress(0)
+      onStoryChange?.(currentUserIndex, prevStoryIndex)
     } else {
       // Move to previous user
       const prevUserIndex = currentUserIndex - 1
@@ -113,9 +112,10 @@ export function StoryViewer({
         setCurrentUserIndex(prevUserIndex)
         setCurrentStoryIndex(prevUser.stories.length - 1)
         setProgress(0)
+        onStoryChange?.(prevUserIndex, prevUser.stories.length - 1)
       }
     }
-  }, [currentUserIndex, currentStoryIndex, stories])
+  }, [currentUserIndex, currentStoryIndex, stories, onStoryChange])
 
   // Touch handlers for mobile navigation
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -160,9 +160,28 @@ export function StoryViewer({
     }
   }
 
-  const handleReaction = (reaction: string) => {
-    console.log("Reaction sent:", reaction)
-    setShowReactions(false)
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent story navigation
+    
+    // Toggle heart liked state
+    setIsHeartLiked(!isHeartLiked)
+    
+    // Create heart animation
+    const newHeart = {
+      id: Date.now(),
+      x: Math.random() * 200 - 100, // Random x offset
+      y: 0
+    }
+    
+    setHearts(prev => [...prev, newHeart])
+    
+    // Remove heart after animation
+    setTimeout(() => {
+      setHearts(prev => prev.filter(heart => heart.id !== newHeart.id))
+    }, 2000)
+    
+    console.log("Heart reaction sent")
   }
 
   const formatTimeAgo = (timestamp: string) => {
@@ -297,34 +316,38 @@ export function StoryViewer({
 
         {/* Bottom actions */}
         <div className="absolute bottom-6 left-6 right-6 z-20">
-          {/* Reactions */}
-          {showReactions && (
-            <div className="mb-6 flex justify-center gap-4 bg-black/50 rounded-full p-4">
-              {["❤️", "😂", "😮", "😢", "😡", "👍"].map((emoji) => (
-                <button
-                  key={emoji}
-                  className="text-5xl hover:scale-110 transition-transform"
-                  onClick={() => handleReaction(emoji)}
-                >
-                  {emoji}
-                </button>
-              ))}
+          {/* Heart animations */}
+          {hearts.map(heart => (
+            <div
+              key={heart.id}
+              className="absolute bottom-16 left-1/2 pointer-events-none"
+              style={{
+                transform: `translateX(${heart.x}px)`,
+                animation: 'heartFloat 2s ease-out forwards'
+              }}
+            >
+              <Heart className="h-6 w-6 text-red-500 fill-red-500" />
             </div>
-          )}
-
+          ))}
+          
           {/* Heart button only */}
           <div className="flex justify-center">
             <Button
               variant="ghost"
               size="icon"
-              className="h-14 w-14 text-white hover:bg-white/20"
-              onClick={() => setShowReactions(!showReactions)}
+              className="h-14 w-14 text-white hover:bg-white/20 transition-transform active:scale-110"
+              onClick={handleHeartClick}
             >
-              <Heart className="h-10 w-10" />
+              <Heart className={`h-13 w-13 transition-all duration-200 ${
+                isHeartLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'
+              }`} />
             </Button>
           </div>
         </div>
+
       </div>
+      
+
     </div>
   )
 }
