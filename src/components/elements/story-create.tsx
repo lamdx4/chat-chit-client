@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { X, Camera, ImageIcon, Type, Smile, Download, Send } from "lucide-react";
+import { X, Camera, ImageIcon, Type, Smile, Download, Send, Globe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ interface StoryCreateProps {
     url: string;
     text?: string;
     file: File; // Pass the selected file to parent for uploading
+    visibility: number; // 0 for public, 1 for friends
   }) => void;
 }
 
@@ -25,7 +26,7 @@ export function StoryCreate({ onClose, onSave }: StoryCreateProps) {
   const [textPosition] = useState({ x: 50, y: 50 }); // Center text (can be extended)
   const [textColor, setTextColor] = useState("#ffffff");
   const [backgroundColor, setBackgroundColor] = useState("#000000");
-
+  const [visibility, setVisibility] = useState(0); // 0 = public, 1 = friends
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +55,7 @@ export function StoryCreate({ onClose, onSave }: StoryCreateProps) {
         url: previewUrl,
         text: storyText,
         file: selectedFile, // Return the original File object
+        visibility: visibility,
       };
       onSave(storyData);
     }
@@ -138,6 +140,33 @@ export function StoryCreate({ onClose, onSave }: StoryCreateProps) {
       {/* Bottom tools: text/color pickers */}
       {selectedFile && (
         <div className="bg-black/80 p-4 space-y-4">
+          {/* Visibility toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-white text-sm">Visibility:</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setVisibility(visibility === 0 ? 1 : 0)}
+              className={`text-white border ${
+                visibility === 0 
+                  ? 'border-green-500 bg-green-500/20' 
+                  : 'border-blue-500 bg-blue-500/20'
+              }`}
+            >
+              {visibility === 0 ? (
+                <>
+                  <Globe className="h-4 w-4 mr-2" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4 mr-2" />
+                  Friends
+                </>
+              )}
+            </Button>
+          </div>
+          
           {/* Text input */}
           <div className="flex items-center gap-2">
             <Type className="h-5 w-5 text-white" />

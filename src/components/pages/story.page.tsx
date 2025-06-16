@@ -1,13 +1,98 @@
-import { ArrowLeft, Camera, Settings, Plus, Search } from "lucide-react";
+import { ArrowLeft, Camera, Settings, Plus, Search, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StoryList } from "../elements/story-list";
+import { StoryWithUser } from "@/types/story";
+import { getRecentStories } from "@/services/story.service";
+import { useState, useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StoryViewer } from "../elements/story-viewer";
+import { StoryUserWithItems } from "@/types/story";
+import useAuth from "@/hooks/use-auth";
+import { useNavigate } from "react-router";
 
 export default function StoryPage() {
+  const [recentStories, setRecentStories] = useState<StoryWithUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStory, setSelectedStory] = useState<StoryUserWithItems | null>(null);
+  const [showViewer, setShowViewer] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<"All Stories" | "Friends">("All Stories");
+  const auth = useAuth();
+  const navigate = useNavigate();
 
-  
+  useEffect(() => {
+    const fetchRecentStories = async () => {
+      try {
+        const stories = await getRecentStories();
+        setRecentStories(stories);
+      } catch (error) {
+        console.error("Failed to fetch recent stories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentStories();
+  }, []);
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const storyTime = new Date(timestamp);
+    const adjustedStoryTime = new Date(storyTime.getTime() + 7 * 60 * 60 * 1000); // Add 7 hours
+    const diffInMs = now.getTime() - adjustedStoryTime.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+
+    if (diffInHours >= 24) return "24h";
+    if (diffInHours < 1) return `${diffInMinutes}m`;
+    return `${diffInHours}h`;
+  };
+
+  const handleStoryClick = (story: StoryWithUser) => {
+    // Convert StoryWithUser to StoryUserWithItems format
+    const storyUserWithItems: StoryUserWithItems = {
+      userId: story.user.userId,
+      userName: story.user.userName,
+      avatar: story.user.avatar,
+      isViewed: story.isViewed,
+      stories: [
+        {
+          storyId: story.storyId,
+          type: story.type,
+          content: story.content,
+          text: story.text,
+          createdAt: story.createdAt,
+          isViewed: story.isViewed,
+          isReacted: story.isReacted,
+        }
+      ]
+    };
+    
+    setSelectedStory(storyUserWithItems);
+    setShowViewer(true);
+  };
+
+  const closeViewer = () => {
+    setShowViewer(false);
+    setSelectedStory(null);
+  };
+
+  const handleArchiveClick = () => {
+    if (auth.user?.userName) {
+      navigate(`/u/profile/${auth.user.userName}`);
+    }
+  };
+
+  // Filter stories based on selected category
+  const filteredStories = recentStories.filter(story => {
+    if (selectedFilter === "Friends") {
+      return story.user.isFriend === true; // Friends only stories
+    }
+    return true; // All stories
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Desktop Layout */}
@@ -69,6 +154,7 @@ export default function StoryPage() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-2"
+                    onClick={handleArchiveClick}
                   >
                     <Camera className="h-4 w-4" />
                     Archive
@@ -81,13 +167,14 @@ export default function StoryPage() {
                   Categories
                 </h4>
                 <div className="space-y-2">
-                  {["All Stories", "Friends", "Close Friends", "Following"].map(
+                  {["All Stories", "Friends"].map(
                     (category) => (
                       <Button
                         key={category}
-                        variant="ghost"
+                        variant={selectedFilter === category ? "default" : "ghost"}
                         size="sm"
                         className="w-full justify-start text-sm"
+                        onClick={() => setSelectedFilter(category as "All Stories" | "Friends")}
                       >
                         {category}
                       </Button>
@@ -118,65 +205,108 @@ export default function StoryPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-semibold">Recent Stories</h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Filter
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      Sort
-                    </Button>
-                  </div>
                 </div>
 
                 {/* Stories Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {/* Placeholder story cards */}
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Card
-                      key={i}
-                      className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                    >
-                      <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 relative">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 mx-auto">
-                              <Camera className="h-6 w-6 text-gray-400" />
+                {loading ? (
+                  <div className="text-center py-12">
+                    <p>Loading stories...</p>
+                  </div>
+                ) : filteredStories.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredStories.map((story) => (
+                      <Card
+                        key={story.storyId}
+                        className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => handleStoryClick(story)}
+                      >
+                        <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 relative">
+                          {story.type === "image" ? (
+                            <img
+                              src={story.content}
+                              alt="Story"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={story.content}
+                                className="w-full h-full object-cover"
+                                muted
+                                preload="metadata"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="bg-black/50 rounded-full p-3">
+                                  <Play className="h-8 w-8 text-white fill-white" />
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-sm font-medium text-gray-600">
-                              Story {i + 1}
-                            </p>
-                          </div>
+                          )}
+                          {story.text && (
+                            <div className="absolute bottom-2 left-2 right-2 bg-black/50 text-white text-xs p-2 rounded">
+                              {story.text}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <CardContent className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                          <div>
-                            <p className="text-sm font-medium">User {i + 1}</p>
-                            <p className="text-xs text-gray-500">2 hours ago</p>
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage
+                                src={story.user.avatar || "/placeholder.svg"}
+                              />
+                              <AvatarFallback>
+                                {story.user.userName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {story.user.userName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatTimeAgo(story.createdAt)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {/* Empty State */}
-                <div className="text-center py-12 text-gray-500">
-                  <Camera className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium mb-2">No more stories</p>
-                  <p className="text-sm">
-                    Check back later for new stories from your friends
-                  </p>
-                  <Button variant="outline" className="mt-4">
-                    Refresh
-                  </Button>
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <Camera className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium mb-2">
+                      {selectedFilter === "Friends" ? "No friends stories" : "No recent stories"}
+                    </p>
+                    <p className="text-sm">
+                      {selectedFilter === "Friends" 
+                        ? "No stories from friends available" 
+                        : "Check back later for new stories from your friends"
+                      }
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => window.location.reload()}
+                    >
+                      Refresh
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Story Viewer */}
+      {showViewer && selectedStory && (
+        <StoryViewer
+          stories={[selectedStory]}
+          initialUserIndex={0}
+          initialStoryIndex={0}
+          onClose={closeViewer}
+        />
+      )}
     </div>
   );
 }

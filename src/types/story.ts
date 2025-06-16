@@ -25,6 +25,7 @@ export interface StoryItem {
   text?: string;
   createdAt: string;
   isViewed: boolean;
+  isReacted: boolean;
 }
 
 export interface StoryUserWithItems {
@@ -33,4 +34,29 @@ export interface StoryUserWithItems {
   avatar: string | null;
   isViewed: boolean;
   stories: StoryItem[];
+}
+
+export interface StoryWithUser {
+  storyId: number;
+  type: "image" | "video";
+  content: string;
+  text?: string;
+  createdAt: string;
+  isViewed: boolean;
+  visibility: number;
+  isReacted: boolean;
+  user: {
+    userId: number;
+    userName: string;
+    avatar: string | null;
+    isFriend: boolean;
+  };
+}
+
+
+export interface StoryReaction {
+  userId: number;
+  userName: string;
+  avatar: string | null;
+  isReacted: boolean;
 }

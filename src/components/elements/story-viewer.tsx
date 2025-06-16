@@ -2,12 +2,13 @@
 
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { X, ChevronLeft, ChevronRight, Heart, Pause, Play, Volume2, VolumeX } from "lucide-react"
+import { useNavigate } from "react-router"
+import { X, ChevronLeft, ChevronRight, Heart, Pause, Play, Volume2, VolumeX, MoreVertical, Archive, Trash2, Eye } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import {StoryUserWithItems } from "@/types/story"
-
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { StoryUserWithItems } from "@/types/story"
+import { StoryViewInteract } from "./story-view-interact"
 
 interface StoryViewerProps {
   stories: StoryUserWithItems[]
@@ -15,6 +16,7 @@ interface StoryViewerProps {
   initialStoryIndex: number
   onClose: () => void
   onStoryChange?: (userIndex: number, storyIndex: number) => void
+  onStoryReact?: (userIndex: number, storyIndex: number) => void
 }
 
 export function StoryViewer({
@@ -23,6 +25,7 @@ export function StoryViewer({
   initialStoryIndex,
   onClose,
   onStoryChange,
+  onStoryReact,
 }: StoryViewerProps) {
   const [currentUserIndex, setCurrentUserIndex] = useState(initialUserIndex)
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex)
@@ -31,6 +34,8 @@ export function StoryViewer({
   const [isMuted, setIsMuted] = useState(false)
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([])
   const [isHeartLiked, setIsHeartLiked] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [showInteractModal, setShowInteractModal] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -42,7 +47,7 @@ export function StoryViewer({
 
   // Auto-advance story
   useEffect(() => {
-    if (isPaused) return
+    if (isPaused || isMenuOpen || showInteractModal) return
 
     const startTime = Date.now()
     progressIntervalRef.current = setInterval(() => {
@@ -61,7 +66,7 @@ export function StoryViewer({
         clearInterval(progressIntervalRef.current)
       }
     }
-  }, [currentUserIndex, currentStoryIndex, isPaused, storyDuration])
+  }, [currentUserIndex, currentStoryIndex, isPaused, isMenuOpen, showInteractModal, storyDuration])
 
   // Handle video events
   useEffect(() => {
@@ -160,9 +165,9 @@ export function StoryViewer({
     }
   }
 
-
-  const handleHeartClick = (e: React.MouseEvent) => {
+  const handleHeartClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation() // Prevent story navigation
+    
     
     // Toggle heart liked state
     setIsHeartLiked(!isHeartLiked)
@@ -181,16 +186,19 @@ export function StoryViewer({
       setHearts(prev => prev.filter(heart => heart.id !== newHeart.id))
     }, 2000)
     
-    console.log("Heart reaction sent")
-  }
+    // Call the story react callback
+    onStoryReact?.(currentUserIndex, currentStoryIndex)
+    
+  }, [isHeartLiked, currentUserIndex, currentStoryIndex, onStoryReact])
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
     const storyTime = new Date(timestamp)
-    // Add 7 hours to the story time
-    storyTime.setHours(storyTime.getHours() + 7)
+    // Add 7 hours (7 * 60 * 60 * 1000 milliseconds) to the story time
+    const adjustedStoryTime = new Date(storyTime.getTime() + (7 * 60 * 60 * 1000))
     
-    const diffInMilliseconds = now.getTime() - storyTime.getTime()
+    // Calculate difference between now and the adjusted story time
+    const diffInMilliseconds = now.getTime() - adjustedStoryTime.getTime()
     const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60))
     const diffInHours = Math.floor(diffInMilliseconds / (1000 * 60 * 60))
 
@@ -200,6 +208,38 @@ export function StoryViewer({
     }
     if (diffInHours >= 24) return "24h"
     return `${diffInHours}h`
+  }
+
+  const navigate = useNavigate()
+
+  const handleAvatarClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent story navigation
+    
+    // Don't navigate if it's the user's own story
+    if (currentUser.userName === "Your Story") {
+      return
+    }
+    
+    navigate(`/u/profile/${currentUser.userName}`)
+  }
+
+  // Temporary handlers for three-dot menu
+  const handleAddToArchive = () => {
+    console.log("Add to archive clicked for story:", currentStory.storyId)
+    setIsMenuOpen(false)
+    // TODO: Implement add to archive functionality
+  }
+
+  const handleDeleteStory = () => {
+    console.log("Delete story clicked for story:", currentStory.storyId)
+    setIsMenuOpen(false)
+    // TODO: Implement delete story functionality
+  }
+
+  const handleViewInteractions = () => {
+    console.log("View interactions clicked for story:", currentStory.storyId)
+    setIsMenuOpen(false)
+    setShowInteractModal(true)
   }
 
   if (!currentUser || !currentStory) return null
@@ -228,7 +268,10 @@ export function StoryViewer({
         {/* Header */}
         <div className="absolute top-12 left-6 right-6 z-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-white">
+            <Avatar 
+              className="h-16 w-16 border-2 border-white cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleAvatarClick}
+            >
               <AvatarImage src={currentUser.avatar || "/placeholder.svg"} />
               <AvatarFallback className="text-xl">{currentUser.userName[0]}</AvatarFallback>
             </Avatar>
@@ -239,25 +282,58 @@ export function StoryViewer({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Three-dot menu for "Your Story" */}
+            {currentUser.userName === "Your Story" && (
+              <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-12 w-12 text-white hover:bg-white/20"
+                  >
+                    <MoreVertical className="h-6 w-6" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  className="w-56" 
+                  align="end"
+                >
+                  <DropdownMenuItem onClick={handleAddToArchive}>
+                    <Archive className="h-4 w-4 mr-2" />
+                    Add to Archive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDeleteStory} className="text-red-600">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Story
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleViewInteractions}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Interactions
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Pause/Play button for all stories */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 text-white hover:bg-white/20"
+              onClick={() => setIsPaused(!isPaused)}
+            >
+              {isPaused ? <Play className="h-10 w-10" /> : <Pause className="h-10 w-10" />}
+            </Button>
+
+            {/* Mute/Unmute button only for videos */}
             {currentStory.type === "video" && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-12 w-12 text-white hover:bg-white/20"
-                  onClick={() => setIsPaused(!isPaused)}
-                >
-                  {isPaused ? <Play className="h-10 w-10" /> : <Pause className="h-10 w-10" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-12 w-12 text-white hover:bg-white/20"
-                  onClick={() => setIsMuted(!isMuted)}
-                >
-                  {isMuted ? <VolumeX className="h-10 w-10" /> : <Volume2 className="h-10 w-10" />}
-                </Button>
-              </>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-white hover:bg-white/20"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? <VolumeX className="h-10 w-10" /> : <Volume2 className="h-10 w-10" />}
+              </Button>
             )}
             <Button variant="ghost" size="icon" className="h-12 w-12 text-white hover:bg-white/20" onClick={onClose}>
               <X className="h-10 w-10" />
@@ -330,8 +406,8 @@ export function StoryViewer({
             </div>
           ))}
           
-          {/* Heart button only */}
-          <div className="flex justify-center">
+            {/* Heart button */}
+            <div className="flex justify-center">
             <Button
               variant="ghost"
               size="icon"
@@ -339,15 +415,37 @@ export function StoryViewer({
               onClick={handleHeartClick}
             >
               <Heart className={`h-13 w-13 transition-all duration-200 ${
-                isHeartLiked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'
+              currentStory.isReacted ? 'text-red-500 fill-red-500 scale-110' : 'text-white'
               }`} />
             </Button>
-          </div>
+            </div>
         </div>
 
       </div>
       
+      {/* Story Interactions Modal */}
+      <StoryViewInteract
+        isOpen={showInteractModal}
+        onClose={() => setShowInteractModal(false)}
+        storyId={currentStory.storyId}
+      />
 
+      <style>{`
+        @keyframes heartFloat {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: translateY(-50px) scale(1.2);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-120px) scale(1.5);
+          }
+        }
+      `}</style>
     </div>
   )
 }

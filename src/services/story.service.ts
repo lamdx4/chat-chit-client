@@ -1,12 +1,12 @@
 import { axios_auth } from "@/config/axios-auth";
-import { Story, StoryUser, StoryUserWithItems} from "@/types/story";
+import { Story, StoryReaction, StoryUser, StoryUserWithItems, StoryWithUser} from "@/types/story";
 import { ResponseData } from "@/types/response.types";
 
 
 export async function createStory({
   file,
   text,
-  visibility = 0,
+  visibility,
 }: {
   file: File;
   text?: string;
@@ -68,5 +68,37 @@ export async function getUserStories(userId?: number): Promise<StoryUserWithItem
   } catch (error) {
     console.error(error);
     return null;
+  }
+}
+
+
+export async function getRecentStories(): Promise<StoryWithUser[]> {
+  try {
+    const res = await axios_auth.get<ResponseData<StoryWithUser[]>>("/story/recent");
+    return res.data.data ?? [];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+
+export async function reactToStory(storyId: number): Promise<boolean> {
+  try {
+    await axios_auth.post(`/story/${storyId}/react`);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+
+export async function getStoryInteractions(storyId: number): Promise<StoryReaction[]> {
+  try {
+    const res = await axios_auth.get<ResponseData<StoryReaction[]>>(`/story/${storyId}/interactions`);
+    return res.data.data ?? [];
+  } catch (error) {
+    console.error(error);
+    return [];
   }
 }
