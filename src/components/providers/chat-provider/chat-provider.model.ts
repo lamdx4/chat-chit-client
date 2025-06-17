@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from "react";
+import { useReducer, useEffect, useCallback } from "react";
 import { chatReducer } from "./chat-provider.reducer";
 import { ChatContextType, ChatState } from "./chat-provider.types";
 import MessageListener from "@/services/message-listener";
@@ -6,75 +6,66 @@ import { chatService } from "@/services/group-service";
 import Message from "@/types/message.model";
 
 const initialState: ChatState = {
-  isFirstLoadGroup: false,
+  isLoadingGroup: false,
   groups: [],
   selectedGroupId: null,
+  statusGroupPagination: {
+    isHasMore: true,
+    nextCursor: Number.MAX_SAFE_INTEGER,
+  },
 };
 
 function useGroupModel(): ChatContextType {
   const [state, dispatch] = useReducer(chatReducer, initialState);
 
   // Load danh sách group ban đầu
-  const firstLoadGroups = async () => {
-    dispatch({ type: "SET_FIRST_LOAD", payload: true });
+  const loadMoreGroups = useCallback(async () => {
     chatService
-      .getGroupList(-1, 20)
+      .getGroupList(state.statusGroupPagination.nextCursor, 5)
       .then(async (res) => {
-        for (const group of res.data.data.data) {
-          dispatch({ type: "ADD_GROUP", payload: group });
-          for (const message of group.messages) {
-            const member = await chatService.getInfoMember(
-              group.groupId,
-              message.userId
-            );
-            if (member) {
-              dispatch({
-                type: "ADD_MEMBER",
-                payload: { groupId: group.groupId, member },
-              });
-            }
-          }
-        }
+        dispatch({ type: "ADD_GROUPS", payload: res });
       })
       .catch((err) => {
         console.error("Error loading groups:", err);
       })
       .finally(() => {
-        dispatch({ type: "SET_FIRST_LOAD", payload: false });
+        dispatch({ type: "SET_STATE_LOADING", payload: false });
       });
-  };
+  }, [state.statusGroupPagination.nextCursor]);
 
   useEffect(() => {
-    firstLoadGroups();
+    loadMoreGroups();
+  }, []);
 
-    const handleNewMessage = async (messages: Message[]) => {
-      for (const message of messages) {
-        const groupExists = state.groups.some(
-          (group) => group.groupId === message.groupId
+  useEffect(() => {
+    const handleNewMessage = async (message: Message) => {
+      const groupExists = state.groups.some(
+        (group) => group.groupId === message.ownerMember?.groupId
+      );
+
+      if (groupExists) {
+        dispatch({
+          type: "ADD_MESSAGE",
+          payload: { groupId: message.ownerMember.groupId, message },
+        });
+      } else {
+        const newGroup = await chatService.getInfoGroup(
+          message.ownerMember?.groupId
         );
-
-        if (groupExists) {
+        const member = await chatService.getInfoMember(
+          message.ownerMember.groupId,
+          message.ownerMember.userId
+        );
+        if (newGroup && member) {
+          dispatch({ type: "ADD_GROUP", payload: newGroup });
+          dispatch({
+            type: "ADD_MEMBER",
+            payload: { groupId: newGroup.groupId, member },
+          });
           dispatch({
             type: "ADD_MESSAGE",
-            payload: { groupId: message.groupId, message },
+            payload: { groupId: newGroup.groupId, message },
           });
-        } else {
-          const newGroup = await chatService.getInfoGroup(message.groupId);
-          const member = await chatService.getInfoMember(
-            message.groupId,
-            message.userId
-          );
-          if (newGroup && member) {
-            dispatch({ type: "ADD_GROUP", payload: newGroup });
-            dispatch({
-              type: "ADD_MEMBER",
-              payload: { groupId: newGroup.groupId, member },
-            });
-            dispatch({
-              type: "ADD_MESSAGE",
-              payload: { groupId: newGroup.groupId, message },
-            });
-          }
         }
       }
     };
@@ -82,13 +73,13 @@ function useGroupModel(): ChatContextType {
     return () => {
       MessageListener.getInstance().off("message", handleNewMessage);
     };
-  }, []);
+  }, [state.groups]);
 
   const selectGroup = (groupId: number) => {
     dispatch({ type: "SET_SELECTED_GROUP_ID", payload: groupId });
   };
 
-  const loadMoreMessages = async () => {
+  const loadMoreMessages = useCallback(async () => {
     if (state.selectedGroupId === null) return;
     try {
       const group = state.groups.find(
@@ -110,37 +101,24 @@ function useGroupModel(): ChatContextType {
     } catch (error) {
       console.error("Error loading messages:", error);
     }
-  };
+  }, [state.selectedGroupId, state.groups]);
 
-  const hasFirstLoadedMessages = (groupId: number): boolean => {
-    return state.groups.some((group) => group.groupId === groupId);
-  };
-
-  const sendTextMessage = async (
-    groupId: number,
-    content: string,
-    replyMessageId?: number,
-    manipulates?: number[]
-  ) => {
-    try {
-      await chatService.sendMessage(groupId, {
-        content,
-        replyMessageId,
-        manipulates,
-      });
-    } catch (error) {
-      console.error(`Error sending message to group ${groupId}:`, error);
-    }
-  };
+  const hasFirstLoadedMessages = useCallback(
+    (groupId: number): boolean => {
+      return state.groups.some((group) => group.groupId === groupId);
+    },
+    [state.groups]
+  );
 
   return {
-    isFirstLoadGroup: state.isFirstLoadGroup,
+    isLoadingGroup: state.isLoadingGroup,
     groups: state.groups,
     selectedGroupId: state.selectedGroupId,
     selectGroup,
     loadMoreMessages,
     hasFirstLoadedMessages,
-    sendTextMessage,
+    loadMoreGroups,
+    statusGroupPagination: state.statusGroupPagination,
   };
 }
 

@@ -1,4 +1,4 @@
-import { CirclePlus, Loader2, Search } from "lucide-react";
+import { CirclePlus, Search } from "lucide-react";
 import { Input } from "../ui/input";
 import GroupList from "../elements/group-list.element";
 import MessageList from "../elements/message-list.element";
@@ -14,7 +14,7 @@ import ChatDetailsPanel from "../elements/chat-details-panel";
 import { CreateGroupChatDialog } from "../elements/create-group-dialog";
 
 export default function MessageChat() {
-  const { selectedGroupId, isFirstLoadGroup } = useContext(ChatContext);
+  const { selectedGroupId, groups } = useContext(ChatContext);
   const [showChatDetails, setShowChatDetails] = useState(false);
   const [isOpenCreateGroupDialog, setIsOpenCreateGroupDialog] = useState(false);
 
@@ -22,12 +22,12 @@ export default function MessageChat() {
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-10 h-full gap-3 ">
       {/* Chat List */}
       <div
-        className={`col-span-1 md:col-span-1 ${
+        className={`col-span-1 md:col-span-1 h-full flex flex-1 flex-col ${
           showChatDetails ? "lg:col-span-3" : "lg:col-span-3"
-        }  border-r rounded-xl
+        }  border-r rounded-xl overflow-hidden 
        bg-white border-white`}
       >
-        <div className="p-4 mb-1 border-b border-gray-200">
+        <div className="p-4 mb-1 border-b border-gray-200 ">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold mb-4">Chats</h1>
 
@@ -52,27 +52,20 @@ export default function MessageChat() {
             />
           </div>
         </div>
-        {isFirstLoadGroup ? (
-          <>
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="animate-spin" />
-            </div>
-          </>
-        ) : (
-          <GroupList />
-        )}
+        <GroupList />
       </div>
 
       {/* Chat Area */}
       <div
         className={`col-span-1 md:col-span-2 ${
           showChatDetails ? "lg:col-span-5" : "lg:col-span-7"
-        }  border-r overflow-y-auto 
+        }  border-r overflow-y-scroll 
         rounded-xl bg-white border-white`}
       >
         <div className="flex-1 flex flex-col rounded-xl bg-white border-white h-full">
           {selectedGroupId ? (
             <MessageList
+              key={selectedGroupId}
               isOpenChatDetailsPanel={showChatDetails}
               setIsOpenChatDetailsPanel={() => {
                 setShowChatDetails(!showChatDetails);
@@ -91,11 +84,11 @@ export default function MessageChat() {
           <ChatDetailsPanel
             isOpen={showChatDetails}
             onClose={() => setShowChatDetails(false)}
-            chatData={{
-              name: "con chó bú c chó",
-              username: "@anh.hoang.211869",
-              avatar: "/placeholder.svg",
-            }}
+            chatData={
+              selectedGroupId
+                ? groups.find((g) => g.groupId === selectedGroupId)
+                : undefined
+            }
           />
         </div>
       )}

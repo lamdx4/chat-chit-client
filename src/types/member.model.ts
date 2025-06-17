@@ -1,26 +1,34 @@
+import Group, { GroupRole } from "./group.model";
+import Message from "./message.model";
+import Reaction from "./react.model";
 import User from "./user";
 
-export class Member {
-  memberId: number;
-  lastview: Date | null;
-  position: number;
-  status: number;
-  timeJoin: Date;
-  inforMember: User;
+export enum MemberStatusType {
+  Invited = "Invited",
+  AdminApprovalPending = "AdminApprovalPending",
+  Active = "Active",
+  Left = "Left",
+  Banned = "Banned",
+}
 
-  constructor(
-    id: number,
-    lastview: Date | null,
-    position: number,
-    status: number,
-    timejoin: Date,
-    inforMember: User
-  ) {
-    this.memberId = id;
-    this.lastview = lastview;
-    this.position = position;
-    this.status = status;
-    this.timeJoin = timejoin;
-    this.inforMember = inforMember;
-  }
+export interface Member {
+  memberId: number;
+  groupId: number;
+  userId: number;
+  lastReadMessageId?: number;
+  lastReceivedMessageId?: number;
+  roleId: number;
+  status: MemberStatusType;
+  timeJoin: Date;
+  nickName: string;
+
+  // Relations
+  role?: GroupRole;
+  group?: Group;
+  user?: User;
+  lastReadMessage?: Message;
+  lastReceivedMessage?: Message;
+  manipulateMembers?: Member[];
+  messages?: Message[];
+  reactions?: Reaction[];
 }

@@ -1,12 +1,9 @@
-"use client";
-
+import MessageNotificationText from "./message-notification";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import {
-  File,
   MoreHorizontal,
   Phone,
-  Plus,
   SendHorizonal,
   SmilePlusIcon,
   ThumbsUp,
@@ -17,19 +14,18 @@ import MessageRight from "./message-right.element";
 import MessageTextLeft from "./message-left.element";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import useAuth from "@/hooks/use-auth";
-import { useChatContext } from "@/hooks/use-group";
+import { useChatContext } from "@/hooks/use-chat";
 import EmojiPicker, { EmojiStyle } from "emoji-picker-react";
-import { GifIcon } from "@heroicons/react/24/solid";
+import { GifIcon, PaperClipIcon } from "@heroicons/react/24/solid";
 import GifPicker from "gif-picker-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
 import { FilePreview } from "./file-preview";
 import { Dialog, DialogContent } from "../ui/dialog";
 import AudioRecorder from "./audio-recorder";
+import { MessageType } from "@/types/message.model";
+import { InfiniteScrollMessageTrigger } from "./infinite-scroll-trigger-messages";
+import { chatService } from "@/services/group-service";
+import { toast } from "sonner";
+import allowedMimeTypes from "@/types/allowed-minetype";
 
 interface MessageListProps {
   isOpenChatDetailsPanel: boolean;
@@ -47,6 +43,8 @@ const MessageList: React.FC<MessageListProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // const [shouldScrollToBottom] = useState(true);
+  const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
 
   const openExplorer = () => {
     if (fileInputRef.current) {
@@ -56,6 +54,10 @@ const MessageList: React.FC<MessageListProps> = ({
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files ? Array.from(event.target.files) : [];
+    if (selectedFiles.length + files.length > 5) {
+      toast.error("You can only upload up to 5 files at a time.");
+      return;
+    }
     setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
     // Reset the input value so the same file can be selected again
     if (fileInputRef.current) {
@@ -68,15 +70,17 @@ const MessageList: React.FC<MessageListProps> = ({
   };
 
   const [isUserFocusOnTyping, setIsUserFocusOnTyping] = useState(false);
-  const { groups, selectedGroupId, sendTextMessage, loadMoreMessages } =
-    useChatContext();
+
+  const { groups, selectedGroupId, loadMoreMessages } = useChatContext();
+
   const user = useAuth().user;
+
   const selectedGroup = groups.find(
     (group) => group.groupId === selectedGroupId
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  // const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   // Handle sending message with files
   const handleSendMessage = async () => {
@@ -86,14 +90,44 @@ const MessageList: React.FC<MessageListProps> = ({
 
     // Here you would typically upload the files and get URLs
     // Then send the message with file URLs
-    console.log("Sending message with files:", {
-      text: messageText,
-      files: selectedFiles,
-    });
 
     // For now, just send the text message
-    if (messageText) {
-      await sendTextMessage(selectedGroupId!, messageText);
+    if (messageText && selectedFiles.length > 0) {
+      await chatService
+        .sendFileMessage(
+          selectedGroupId!,
+          selectedFiles,
+          messageText,
+          undefined, // You can set this if you want to reply to a specific message
+          [] // You can set this if you want to manipulate members
+        )
+        .then((res) => {
+          if (res.status === 400 && res.data.message === "INVALID_FILE_TYPE") {
+            toast.error("Invalid file type. Please upload valid files.");
+          }
+        });
+    } else if (selectedFiles.length > 0) {
+      await chatService
+        .sendFileMessage(
+          selectedGroupId!,
+          selectedFiles,
+          messageText,
+          undefined, // You can set this if you want to reply to a specific message
+          [] // You can set this if you want to manipulate members
+        )
+        .then((res) => {
+          if (res.status === 400 && res.data.message === "INVALID_FILE_TYPE") {
+            toast.error("Invalid file type. Please upload valid files.");
+          }
+        });
+    } else if (messageText) {
+      await chatService.sendTextMessage(
+        selectedGroupId!,
+        MessageType.Text,
+        messageText,
+        [],
+        undefined
+      );
       inputRef.current!.value = "";
     }
 
@@ -103,11 +137,24 @@ const MessageList: React.FC<MessageListProps> = ({
     setIsEmojiPickerOpen(false);
   };
 
+  // Scroll xuống cuối
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [containerRef]);
+
   // Xử lý scroll khi cuộn lên
   const handleScroll = useCallback(() => {
-    if (containerRef.current?.scrollTop === 0) {
-      console.log("Loading more messages...");
-      loadMoreMessages().then(() => {
+    if (isFetchingNextPage) return;
+    setIsFetchingNextPage(true);
+    loadMoreMessages()
+      .then(() => {
+        // if (isFirstLoad && shouldScrollToBottom && containerRef.current) {
+        //   setIsFirstLoad(false);
+        //   containerRef.current.scrollTo(0, containerRef.current.scrollHeight);
+        //   return;
+        // }
         const container = containerRef.current;
         if (container) {
           const previousHeight = container.scrollHeight;
@@ -117,46 +164,11 @@ const MessageList: React.FC<MessageListProps> = ({
             container.scrollTop = newHeight - previousHeight; // Giữ nguyên vị trí scroll
           }, 0);
         }
+      })
+      .finally(() => {
+        setIsFetchingNextPage(false);
       });
-    }
-  }, [loadMoreMessages]);
-
-  useEffect(() => {
-    loadMoreMessages().then(() => {
-      const container = containerRef.current;
-      if (container) {
-        const previousHeight = container.scrollHeight;
-        setTimeout(() => {
-          const newHeight = container.scrollHeight;
-          container.scrollTop = newHeight - previousHeight; // Giữ nguyên vị trí scroll
-        }, 0);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Scroll đến cuối khi lần đầu load tin nhắn
-  useEffect(() => {
-    if (isFirstLoad && containerRef.current) {
-      setTimeout(() => {
-        containerRef.current?.scrollTo(0, containerRef.current.scrollHeight);
-      }, 0);
-      setIsFirstLoad(false);
-    }
-  }, [isFirstLoad, selectedGroup?.messages]);
-
-  // Đăng ký sự kiện scroll
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener("scroll", handleScroll);
-    }
-    return () => {
-      if (container) {
-        container.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [handleScroll]);
+  }, [isFetchingNextPage, loadMoreMessages]);
 
   return (
     <>
@@ -198,17 +210,27 @@ const MessageList: React.FC<MessageListProps> = ({
       </div>
       {/* Messages */}
       <div
-        className="flex-1 bg-white pr-3 overflow-auto overflow-x-hidden p-4 max-w-full"
+        className="flex-1 bg-white overflow-y-scroll h-full pl-2 pr-1 pb-2 max-w-full"
         ref={containerRef}
       >
-        <div className="flex gap-1 flex-col justify-end min-h-full ">
+        <div className="flex gap-1 flex-col justify-end overflow-y-scroll ">
+          <InfiniteScrollMessageTrigger
+            fetchNextPage={handleScroll}
+            hasNextPage={true}
+            isFetchingNextPage={isFetchingNextPage}
+            groupId={selectedGroupId!}
+          />
           {selectedGroup?.messages.map((message, index) => (
             <div key={index}>
-              {message.userId === user!.userId ? (
-                <MessageRight message={message} />
-              ) : (
-                <MessageTextLeft message={message} />
-              )}
+              {(() => {
+                if (message.type === MessageType.Notification)
+                  return <MessageNotificationText message={message} />;
+                else if (message.ownerMember?.userId === user!.userId) {
+                  return <MessageRight message={message} />;
+                } else if (message.ownerMember?.userId !== user!.userId) {
+                  return <MessageTextLeft message={message} />;
+                }
+              })()}
             </div>
           ))}
         </div>
@@ -219,7 +241,7 @@ const MessageList: React.FC<MessageListProps> = ({
 
       {/* Input Area */}
       <div className="p-2 flex items-center gap-2 justify-self-end mt-auto">
-        <DropdownMenu>
+        {/* <DropdownMenu>
           <DropdownMenuTrigger>
             <Button variant="ghost" size="icon">
               <Plus className="h-5 w-5" />
@@ -234,18 +256,18 @@ const MessageList: React.FC<MessageListProps> = ({
               Record Audio
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
         <input
           type="file"
           ref={fileInputRef}
           className="hidden"
-          accept="image/*, video/*, audio/*, application/pdf, application/msword, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          accept={allowedMimeTypes.join(",")}
           multiple={true}
           onChange={handleImageSelect}
         />
 
         <Button variant="ghost" size="icon" onClick={openExplorer}>
-          <File className="h-5 w-5" />
+          <PaperClipIcon className="h-5 w-5" />
         </Button>
 
         <Input
@@ -314,8 +336,14 @@ const MessageList: React.FC<MessageListProps> = ({
             <div className="absolute bottom-12 right-0 z-10">
               <GifPicker
                 tenorApiKey={"AIzaSyBNRYh7EinjogorQL7pKiz-CDZTRhc5GHw"}
-                onGifClick={(gif) => {
-                  console.log(gif);
+                onGifClick={async (gif) => {
+                  await chatService.sendTextMessage(
+                    selectedGroupId!,
+                    MessageType.Gif,
+                    gif.url,
+                    [],
+                    undefined
+                  );
                   setIsGifPickerOpen(false);
                   // Handle selected GIF here
                 }}
@@ -372,4 +400,4 @@ const MessageList: React.FC<MessageListProps> = ({
   );
 };
 
-export default React.memo(MessageList);
+export default MessageList;

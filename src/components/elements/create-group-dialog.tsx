@@ -17,6 +17,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useFriends } from "@/hooks/use-relationship";
 import { InfiniteScrollTrigger } from "./infinite-roll-trigger";
 import { GetFriendListRes } from "@/services/types/friend-list";
+import { axios_auth } from "@/config/axios-auth";
+import { ResponseData } from "@/types/response.types";
+import { toast } from "sonner";
 
 export function CreateGroupChatDialog({
   open,
@@ -33,7 +36,8 @@ export function CreateGroupChatDialog({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useFriends(searchTerm);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useFriends(searchTerm);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -68,10 +72,33 @@ export function CreateGroupChatDialog({
     }
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // ...API call here
-      setOpen(false);
-      resetForm();
+      await axios_auth
+        .post<ResponseData<object>>("group/create", {
+          name: conversationName || "Group Chat with Friends",
+          members: selectedFriends.map((f) => f.targetUser.userId),
+        })
+        .then((res) => {
+          if (res.status === 200) {
+            toast.success("Conversation created successfully");
+            setOpen(false);
+            resetForm();
+          } else if (res.status === 400) {
+            if (res.data.message === "NOT_ALL_MEMBERS_ARE_FRIENDS") {
+              setError("All selected members must be your friends.");
+              toast.error("All selected members must be your friends.");
+            }
+          } else {
+            toast.error("Failed to create conversation");
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to create conversation:", error);
+          toast.error("Failed to create conversation");
+        })
+        .finally(() => {
+          setOpen(false);
+          resetForm();
+        });
     } catch {
       setError("Failed to create conversation. Please try again.");
     } finally {

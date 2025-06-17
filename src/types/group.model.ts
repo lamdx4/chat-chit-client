@@ -4,19 +4,35 @@ import Message from "./message.model";
 export default interface Group {
   groupId: number;
   name: string;
-  avatar: string;
-  status: number;
+  avatar: string | null;
+  groupChatStatus: string;
   createAt: Date;
-  type: GroupType;
-  access: number;
+  groupType: string;
   link: string;
   messages: Message[];
   members: Member[];
-  totalMember: number;
-  numMessageUnread: number;
+  memberCount: number;
+  unreadCount: number;
 }
 
-export enum GroupType {
-  COMMUNITY = 0,
-  INVIDIAL = 1,
+// son anh
+export interface GroupRole {
+  roleId: number;
+  name: string;
+}
+
+export enum GroupChatType {
+  Direct = "Direct",
+  Group = "Group",
+}
+
+export enum GroupChatStatusType {
+  Active = "Active",
+  Inactive = "Inactive",
+  Deleted = "Deleted",
+}
+
+export enum GroupPrivacyType {
+  Public = "Public",
+  Private = "Private",
 }

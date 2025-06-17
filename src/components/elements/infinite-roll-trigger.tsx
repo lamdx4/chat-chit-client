@@ -25,7 +25,7 @@ export const InfiniteScrollTrigger = ({
       {isFetchingNextPage && (
         <Loader2 className="h-6 w-6 animate-spin mx-auto" />
       )}
-      {!hasNextPage && <p className="text-gray-500">No more requests</p>}
+      {!hasNextPage && <p className="text-gray-500">No more data</p>}
     </div>
   );
 };

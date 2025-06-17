@@ -1,27 +1,39 @@
 import Reaction from "./react.model";
+import { Member } from "./member.model";
+import { Poll } from "./poll.model";
+import { File } from "./file.model";
+
+export enum MessageType {
+  Text = "Text",
+  Gif = "Gif",
+  File = "File",
+  Notification = "Notification",
+  Contact = "Contact",
+}
+
+export enum MessageStatus {
+  Normal = "Normal",
+  DeletedByOwner = "DeletedByOwner",
+  DeletedByAdmin = "DeletedByAdmin",
+}
 
 export default interface Message {
-  memberId: string;
-  content: string;
-  createAt: Date;
-  groupId: number;
   messageId: number;
-  userId: number;
-  replyMessageId: number;
-  status: number;
-  type: number;
-  reacts: Array<Reaction>;
-  manipulates: Array<number>;
-}
-export enum MessageType {
-  TEXT = 0,
-  IMAGE = 1,
-  VIDEO = 2,
-  GIF = 3,
-  VOTE = 4,
-  NOTIFY = 5,
-  LOCATION = 6,
-  CONTACT = 7,
-  AUDIO = 8,
-  FILE_DOCUMENT = 9,
+  content: string;
+  createdAt: Date;
+  type: MessageType;
+  status: MessageStatus;
+  replyMessageId?: number | null;
+  isPin: boolean;
+  memberId: number;
+  fileId?: number;
+
+  // Relation
+  ownerMember: Member;
+  replyMessage?: Message;
+  inverseReplyMessage?: Message[];
+  reactions?: Reaction[];
+  manipulateMembers: Member[];
+  poll?: Poll;
+  files: File[];
 }

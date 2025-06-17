@@ -7,7 +7,7 @@ export const ChatContext = createContext<ChatContextType>({
   selectGroup: () => {},
   loadMoreMessages: async () => {},
   hasFirstLoadedMessages: () => false,
-  isFirstLoadGroup: false,
+  isLoadingGroup: false,
   sendTextMessage: async () => {},
 });
 

@@ -19,37 +19,32 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import Group, { GroupChatType } from "@/types/group.model";
 
 interface ChatDetailsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  chatData?: {
-    name: string;
-    username: string;
-    avatar: string;
-  };
+  chatData?: Group;
 }
 
 export default function ChatDetailsPanel({
   isOpen,
-  chatData = {
-    name: "con chó bú c chó",
-    username: "@anh.hoang.211869",
-    avatar: "/placeholder.svg",
-  },
+  chatData,
 }: ChatDetailsPanelProps) {
   if (!isOpen) return null;
-
+  if (!chatData) return <></>;
   return (
     <div className="h-full border-l border-gray-200 bg-white overflow-y-auto">
       {/* Header with profile info */}
       <div className="flex flex-col items-center justify-center p-6 border-b border-gray-200">
         <Avatar className="h-20 w-20 mb-3">
-          <AvatarImage src={chatData.avatar || "/placeholder.svg"} />
+          <AvatarImage src={chatData?.avatar || "/placeholder.svg"} />
           <AvatarFallback>CH</AvatarFallback>
         </Avatar>
         <h2 className="text-xl font-bold">{chatData.name}</h2>
-        <p className="text-gray-500 text-sm">{chatData.username}</p>
+        <p className="text-gray-500 text-sm">
+          {chatData.groupType === GroupChatType.Direct ? "" : ""}
+        </p>
 
         {/* Action buttons */}
         <div className="flex justify-center gap-8 mt-6 w-full">

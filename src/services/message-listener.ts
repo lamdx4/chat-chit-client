@@ -21,7 +21,8 @@ class MessageListener extends EventEmitter {
   }
 
   private init() {
-    this.socket.on("new-message", (msg: Message[]) => {
+    this.socket.on("new-message", (msg: Message) => {
+      console.log("New message event received: ", msg);
       this.emit("message", msg);
     });
     this.socket.on("typing", (group: Group) => {
