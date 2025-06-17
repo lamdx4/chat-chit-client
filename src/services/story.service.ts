@@ -1,5 +1,5 @@
 import { axios_auth } from "@/config/axios-auth";
-import { Story, StoryReaction, StoryUser, StoryUserWithItems, StoryWithUser} from "@/types/story";
+import { Story, StoryReaction, StoryUser, StoryUserWithItems, StoryWithUser, UserStoryArchived} from "@/types/story";
 import { ResponseData } from "@/types/response.types";
 
 
@@ -100,5 +100,28 @@ export async function getStoryInteractions(storyId: number): Promise<StoryReacti
   } catch (error) {
     console.error(error);
     return [];
+  }
+}
+
+
+export async function getArchivedStories(userId?: number): Promise<UserStoryArchived | null> {
+  try {
+    const endpoint = userId ? `/story/archived/${userId}` : '/story/archived/c';
+    const res = await axios_auth.get<ResponseData<UserStoryArchived>>(endpoint);
+    return res.data.data ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+
+export async function archiveStory(storyId: number): Promise<boolean> {
+  try {
+    await axios_auth.post(`/story/${storyId}/archive`);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
   }
 }

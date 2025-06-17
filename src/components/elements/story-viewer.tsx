@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { StoryUserWithItems } from "@/types/story"
 import { StoryViewInteract } from "./story-view-interact"
+import { archiveStory } from "@/services/story.service"
+import { toast } from "sonner"
 
 interface StoryViewerProps {
   stories: StoryUserWithItems[]
@@ -224,10 +226,15 @@ export function StoryViewer({
   }
 
   // Temporary handlers for three-dot menu
-  const handleAddToArchive = () => {
-    console.log("Add to archive clicked for story:", currentStory.storyId)
-    setIsMenuOpen(false)
-    // TODO: Implement add to archive functionality
+  const handleAddToArchive = async () => {
+    try {
+      await archiveStory(currentStory.storyId)
+      setIsMenuOpen(false)
+      toast.success("Story archived successfully")
+    } catch (error) {
+      console.error("Failed to archive story:", error)
+      toast.error("Failed to archive story")
+    }
   }
 
   const handleDeleteStory = () => {

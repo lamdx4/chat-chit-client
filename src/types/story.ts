@@ -60,3 +60,22 @@ export interface StoryReaction {
   avatar: string | null;
   isReacted: boolean;
 }
+
+export interface ArchivedStoryItem {
+  storyId: number;
+  type: "image" | "video";
+  content: string;
+  text: string;
+  createdAt: string;
+  isViewed: boolean;
+  isReacted: boolean;
+  viewCount: number;
+  reactCount: number;
+}
+
+export interface UserStoryArchived {
+  userId: number;
+  userName: string;
+  avatar: string | null;
+  stories: ArchivedStoryItem[];
+}

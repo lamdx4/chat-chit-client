@@ -39,11 +39,18 @@ import {
 } from "../ui/dropdown-menu";
 import copyableText from "@/utils/copy-to-clip-board";
 import { toast } from "sonner";
+import { StoryViewer } from "@/components/elements/story-viewer";
+import { getUserStories, getArchivedStories } from "@/services/story.service";
+import { StoryItem, ArchivedStoryItem } from "@/types/story";
+import StoryArchive from "@/components/elements/story-archive";
 
 export default function UserProfile() {
   const navigate = useNavigate();
   const [userInformation, setUserInformation] = useState<User | null>(null);
   const [isUserNotFound, setIsUserNotFound] = useState(false);
+  const [userStories, setUserStories] = useState<StoryItem[]>([]);
+  const [archivedStories, setArchivedStories] = useState<ArchivedStoryItem[]>([]);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
   const auth = useAuth();
   const params = useParams();
   const userName = params.userName;
@@ -82,6 +89,41 @@ export default function UserProfile() {
       });
   }, [userName]);
 
+  useEffect(() => {
+    if (userInformation?.userId) {
+      getUserStories(userInformation.userId)
+        .then((res) => {
+          if (res && res.stories) {
+            setUserStories(res.stories);
+          } else {
+            setUserStories([]);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch user stories:", error);
+          setUserStories([]);
+        });
+
+      // Fetch archived stories with debugging
+      console.log('Fetching archived stories for user:', userInformation.userId);
+      getArchivedStories(userInformation.userId)
+        .then((res) => {
+          console.log('Archived stories response:', res);
+          if (res && res.stories) {
+            console.log('Setting archived stories:', res.stories);
+            setArchivedStories(res.stories);
+          } else {
+            console.log('No archived stories found');
+            setArchivedStories([]);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch archived stories:", error);
+          setArchivedStories([]);
+        });
+    }
+  }, [userInformation?.userId]);
+
   if (!userName) {
     return <NotFoundElement />;
   }
@@ -96,7 +138,18 @@ export default function UserProfile() {
       <div className="flex flex-col md:flex-row justify-center items-center md:items-center gap-17 mb-8">
         {/* Profile Picture */}
         <div className="relative w-35 h-35 md:w-35 md:h-35">
-          <div className="absolute inset-0 rounded-full border-2 border-gray-200 dark:border-gray-700">
+          <div
+            className={`absolute inset-0 rounded-full  ${
+              userStories.length > 0
+                ? "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400 p-1 cursor-pointer hover:scale-105 transition-transform"
+                : "border-gray-200 dark:border-gray-700 border-2"
+            }`}
+            onClick={() => {
+              if (userStories.length > 0) {
+                setShowStoryViewer(true);
+              }
+            }}
+          >
             <div className="rounded-full bg-white p-0.5 h-full w-full">
               <Avatar className="h-full w-full rounded-full overflow-hidden">
                 {userInformation.avatar ? (
@@ -287,6 +340,32 @@ export default function UserProfile() {
         </div>
       </div>
       <Separator className="my-4" />
+
+      {/* Story Archive Section */}
+      <div className="mb-8">
+        <StoryArchive stories={archivedStories} />
+      </div>
+
+      {/* Story Viewer */}
+      {showStoryViewer && userStories.length > 0 && (
+        <StoryViewer
+          stories={[
+            {
+              userId: userInformation.userId,
+              userName: userInformation.userName,
+              avatar: userInformation.avatar
+                ? getUrlFile(userInformation.avatar)
+                : "/placeholder.svg",
+              stories: userStories,
+              isViewed: false,
+            },
+          ]}
+          initialUserIndex={0}
+          initialStoryIndex={0}
+          onClose={() => setShowStoryViewer(false)}
+        />
+      )}
+
       {/* 
       Content Tabs
       <Tabs defaultValue="posts" className="w-full">

@@ -148,14 +148,14 @@ export function StoryList() {
   };
 
   const handleReactToStory = async (userIndex: number, storyIndex: number) => {
-    try {
-      const currentStory = stories[userIndex]?.stories[storyIndex];
-      if (!currentStory) return;
-      
-      if (currentStory.isReacted) return;
-      
-      await reactToStory(currentStory.storyId);
-      
+    const currentStory = stories[userIndex]?.stories[storyIndex];
+    if (!currentStory) return;
+    
+    if (currentStory.isReacted) return;
+    
+    const success = await reactToStory(currentStory.storyId);
+    
+    if (success) {
       // Update local state to mark the story as reacted
       setStories(prev => 
         prev.map((user, idx) => {
@@ -171,9 +171,7 @@ export function StoryList() {
           return user;
         })
       );
-      
-    } catch (error) {
-      console.error("Failed to react to story:", error);
+    } else {
       toast.error("Failed to add reaction");
     }
   };
@@ -184,9 +182,9 @@ export function StoryList() {
     const currentStory = stories[userIndex]?.stories[storyIndex];
     
     if (currentStory && !currentStory.isViewed) {
-      try {
-        await viewStory(currentStory.storyId);
-        
+      const success = await viewStory(currentStory.storyId);
+
+      if (success) {
         // Update local state to mark the specific story as viewed
         setStories(prev => 
           prev.map((user, idx) => {
@@ -208,8 +206,6 @@ export function StoryList() {
             return user;
           })
         );
-      } catch (error) {
-        console.error("Failed to mark story as viewed:", error);
       }
     }
   };

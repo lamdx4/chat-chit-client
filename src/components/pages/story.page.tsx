@@ -220,7 +220,7 @@ export default function StoryPage() {
                         className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => handleStoryClick(story)}
                       >
-                        <div className="aspect-[4/3] bg-gradient-to-br from-blue-100 to-purple-100 relative">
+                        <div className="aspect-[4/5] bg-gradient-to-br from-blue-100 to-purple-100 relative overflow-hidden">
                           {story.type === "image" ? (
                             <img
                               src={story.content}
@@ -235,22 +235,22 @@ export default function StoryPage() {
                                 muted
                                 preload="metadata"
                               />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="bg-black/50 rounded-full p-3">
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                <div className="bg-black/60 rounded-full p-3">
                                   <Play className="h-8 w-8 text-white fill-white" />
                                 </div>
                               </div>
                             </div>
                           )}
                           {story.text && (
-                            <div className="absolute bottom-2 left-2 right-2 bg-black/50 text-white text-xs p-2 rounded">
-                              {story.text}
+                            <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded backdrop-blur-sm">
+                              <p className="line-clamp-2">{story.text}</p>
                             </div>
                           )}
                         </div>
                         <CardContent className="p-3">
                           <div className="flex items-center gap-2">
-                            <Avatar className="w-8 h-8">
+                            <Avatar className="w-8 h-8 flex-shrink-0">
                               <AvatarImage
                                 src={story.user.avatar || "/placeholder.svg"}
                               />
@@ -258,8 +258,8 @@ export default function StoryPage() {
                                 {story.user.userName[0]}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="text-sm font-medium">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">
                                 {story.user.userName}
                               </p>
                               <p className="text-xs text-gray-500">
