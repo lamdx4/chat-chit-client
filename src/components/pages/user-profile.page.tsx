@@ -43,13 +43,16 @@ import { StoryViewer } from "@/components/elements/story-viewer";
 import { getUserStories, getArchivedStories } from "@/services/story.service";
 import { StoryItem, ArchivedStoryItem } from "@/types/story";
 import StoryArchive from "@/components/elements/story-archive";
+import { viewStory } from "@/services/story.service";
 
 export default function UserProfile() {
   const navigate = useNavigate();
   const [userInformation, setUserInformation] = useState<User | null>(null);
   const [isUserNotFound, setIsUserNotFound] = useState(false);
   const [userStories, setUserStories] = useState<StoryItem[]>([]);
-  const [archivedStories, setArchivedStories] = useState<ArchivedStoryItem[]>([]);
+  const [archivedStories, setArchivedStories] = useState<ArchivedStoryItem[]>(
+    []
+  );
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const auth = useAuth();
   const params = useParams();
@@ -105,15 +108,18 @@ export default function UserProfile() {
         });
 
       // Fetch archived stories with debugging
-      console.log('Fetching archived stories for user:', userInformation.userId);
+      console.log(
+        "Fetching archived stories for user:",
+        userInformation.userId
+      );
       getArchivedStories(userInformation.userId)
         .then((res) => {
-          console.log('Archived stories response:', res);
+          console.log("Archived stories response:", res);
           if (res && res.stories) {
-            console.log('Setting archived stories:', res.stories);
+            console.log("Setting archived stories:", res.stories);
             setArchivedStories(res.stories);
           } else {
-            console.log('No archived stories found');
+            console.log("No archived stories found");
             setArchivedStories([]);
           }
         })
@@ -123,6 +129,30 @@ export default function UserProfile() {
         });
     }
   }, [userInformation?.userId]);
+
+  const handleStoryChange = async (userIndex: number, storyIndex: number) => {
+    const story = userStories[storyIndex];
+    if (story && !story.isViewed) {
+      const result = await viewStory(story.storyId);
+      if (result) {
+        // Update local state to mark story as viewed
+        setUserStories((prev) => {
+          const updatedStories = prev.map((s, index) =>
+            index === storyIndex ? { ...s, isViewed: true } : s
+          );          
+          return updatedStories;
+        });
+      }
+    }
+  };
+
+  const handleClick = () => {
+    if (userStories.length > 0) {
+      setShowStoryViewer(true);
+      // Call viewStory for the first story if not viewed
+      handleStoryChange(0, 0);
+    }
+  };
 
   if (!userName) {
     return <NotFoundElement />;
@@ -141,14 +171,12 @@ export default function UserProfile() {
           <div
             className={`absolute inset-0 rounded-full  ${
               userStories.length > 0
-                ? "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400 p-1 cursor-pointer hover:scale-105 transition-transform"
+                ? userStories.every((story) => story.isViewed)
+                  ? "border-gray-200 dark:border-gray-700 border-2 cursor-pointer hover:scale-105 transition-transform"
+                  : "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400 p-1 cursor-pointer hover:scale-105 transition-transform"
                 : "border-gray-200 dark:border-gray-700 border-2"
             }`}
-            onClick={() => {
-              if (userStories.length > 0) {
-                setShowStoryViewer(true);
-              }
-            }}
+            onClick={handleClick}
           >
             <div className="rounded-full bg-white p-0.5 h-full w-full">
               <Avatar className="h-full w-full rounded-full overflow-hidden">
@@ -363,6 +391,7 @@ export default function UserProfile() {
           initialUserIndex={0}
           initialStoryIndex={0}
           onClose={() => setShowStoryViewer(false)}
+          onStoryChange={handleStoryChange}
         />
       )}
 
