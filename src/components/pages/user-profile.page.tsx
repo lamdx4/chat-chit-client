@@ -43,7 +43,7 @@ import { StoryViewer } from "@/components/elements/story-viewer";
 import { getUserStories, getArchivedStories } from "@/services/story.service";
 import { StoryItem, ArchivedStoryItem } from "@/types/story";
 import StoryArchive from "@/components/elements/story-archive";
-import { viewStory } from "@/services/story.service";
+import { viewStory, deleteStory } from "@/services/story.service";
 
 export default function UserProfile() {
   const navigate = useNavigate();
@@ -143,6 +143,28 @@ export default function UserProfile() {
           return updatedStories;
         });
       }
+    }
+  };
+
+  const handleDeleteStory = async (storyIndex: number) => {
+    // Get the story ID from the story at the given index
+    const storyToDelete = userStories[storyIndex];
+    if (!storyToDelete) {
+      toast.error("Story not found");
+      return false;
+    }
+
+    const success = await deleteStory(storyToDelete.storyId);
+    if (success) {
+      toast.success("Story deleted successfully");
+      
+      // Remove the deleted story from userStories
+      setUserStories(prev => prev.filter((_, index) => index !== storyIndex));
+      
+      return true;
+    } else {
+      toast.error("Failed to delete story");
+      return false;
     }
   };
 
@@ -375,48 +397,49 @@ export default function UserProfile() {
       </div>
 
       {/* Story Viewer */}
-      {showStoryViewer && userStories.length > 0 && (
-        <StoryViewer
-          stories={[
-            {
-              userId: userInformation.userId,
-              userName: userInformation.userName,
-              avatar: userInformation.avatar
-                ? getUrlFile(userInformation.avatar)
-                : "/placeholder.svg",
-              stories: userStories,
-              isViewed: false,
-            },
-          ]}
-          initialUserIndex={0}
-          initialStoryIndex={0}
-          onClose={() => setShowStoryViewer(false)}
-          onStoryChange={handleStoryChange}
-        />
-      )}
+        {showStoryViewer && userStories.length > 0 && (
+          <StoryViewer
+            stories={[
+          {
+            userId: userInformation.userId,
+            userName: isOwnProfile ? "Your Story" : userInformation.userName,
+            avatar: userInformation.avatar
+              ? getUrlFile(userInformation.avatar)
+              : "/placeholder.svg",
+            stories: userStories,
+            isViewed: false,
+          },
+            ]}
+            initialUserIndex={0}
+            initialStoryIndex={0}
+            onClose={() => setShowStoryViewer(false)}
+            onStoryChange={handleStoryChange}
+            onStoryDelete={handleDeleteStory}
+          />
+        )}
 
-      {/* 
-      Content Tabs
-      <Tabs defaultValue="posts" className="w-full">
-        <TabsList className="w-full justify-center">
-          <TabsTrigger value="posts" className="flex-1">
-            STORY
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="posts">
-          <div className="grid grid-cols-3 gap-1">
-            {[...Array(9)].map((_, i) => (
-              <div key={i} className="aspect-square">
-                <img
-                  src="/placeholder.svg"
-                  alt={`Post ${i + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs> */}
+        {/* 
+        Content Tabs
+        <Tabs defaultValue="posts" className="w-full">
+          <TabsList className="w-full justify-center">
+            <TabsTrigger value="posts" className="flex-1">
+          STORY
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="posts">
+            <div className="grid grid-cols-3 gap-1">
+          {[...Array(9)].map((_, i) => (
+            <div key={i} className="aspect-square">
+              <img
+            src="/placeholder.svg"
+            alt={`Post ${i + 1}`}
+            className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+            </div>
+          </TabsContent>
+        </Tabs> */}
     </div>
   ) : isUserNotFound ? (
     <NotFoundElement />

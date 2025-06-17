@@ -125,3 +125,13 @@ export async function archiveStory(storyId: number): Promise<boolean> {
     return false;
   }
 }
+
+export async function deleteStory(storyId: number): Promise<boolean> {
+  try {
+    await axios_auth.delete(`/story/${storyId}`);
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}

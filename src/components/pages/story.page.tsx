@@ -260,11 +260,6 @@ export default function StoryPage() {
                               </div>
                             </div>
                           )}
-                          {story.text && (
-                            <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded backdrop-blur-sm">
-                              <p className="line-clamp-2">{story.text}</p>
-                            </div>
-                          )}
                         </div>
                         <CardContent className="p-3">
                           <div className="flex items-center gap-2">

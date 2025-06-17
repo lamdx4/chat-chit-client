@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { StoryUserWithItems } from "@/types/story"
 import { StoryViewInteract } from "./story-view-interact"
-import { archiveStory } from "@/services/story.service"
+import { archiveStory, reactToStory } from "@/services/story.service"
 import { toast } from "sonner"
-import { reactToStory } from "@/services/story.service"
+
 
 interface StoryViewerProps {
   stories: StoryUserWithItems[]
@@ -16,6 +16,7 @@ interface StoryViewerProps {
   initialStoryIndex: number
   onClose: () => void
   onStoryChange?: (userIndex: number, storyIndex: number) => void
+  onStoryDelete?: (storyIndex: number) => void
 }
 
 export function StoryViewer({
@@ -24,6 +25,7 @@ export function StoryViewer({
   initialStoryIndex,
   onClose,
   onStoryChange,
+  onStoryDelete,
 }: StoryViewerProps) {
   const [currentUserIndex, setCurrentUserIndex] = useState(initialUserIndex)
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex)
@@ -240,14 +242,9 @@ export function StoryViewer({
     }
   }
 
-  const handleDeleteStory = () => {
-    console.log("Delete story clicked for story:", currentStory.storyId)
-    setIsMenuOpen(false)
-    // TODO: Implement delete story functionality
-  }
+ 
 
   const handleViewInteractions = () => {
-    console.log("View interactions clicked for story:", currentStory.storyId)
     setIsMenuOpen(false)
     setShowInteractModal(true)
   }
@@ -312,7 +309,7 @@ export function StoryViewer({
                     <Archive className="h-4 w-4 mr-2" />
                     Add to Archive
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDeleteStory} className="text-red-600">
+                  <DropdownMenuItem onClick={() => onStoryDelete?.(currentStoryIndex)} className="text-red-600">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete Story
                   </DropdownMenuItem>
@@ -353,7 +350,7 @@ export function StoryViewer({
 
         {/* Story media */}
         <div
-          className="w-full h-full flex items-center justify-center cursor-pointer px-6"
+          className="w-full h-full flex items-center justify-center cursor-pointer px-6 relative"
           onClick={handleClick}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -372,6 +369,15 @@ export function StoryViewer({
               loop
               playsInline
             />
+          )}
+          
+          {/* Story text overlay */}
+          {currentStory.text && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <p className="text-white text-center text-2xl font-bold break-words max-w-xs mx-4">
+                {currentStory.text}
+              </p>
+            </div>
           )}
         </div>
 

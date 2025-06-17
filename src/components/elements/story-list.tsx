@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { StoryViewer } from "./story-viewer";
 import { StoryCreate } from "@/components/elements/story-create";
-import { createStory, getFriendsStoriesList, viewStory, getUserStories  } from "@/services/story.service";
+import { createStory, getFriendsStoriesList, viewStory, getUserStories, deleteStory  } from "@/services/story.service";
 import { toast } from "sonner";
 import {StoryUserWithItems } from "@/types/story";
 
@@ -178,6 +178,39 @@ export function StoryList() {
           })
         );
       }
+    }
+  };
+
+  const handleDeleteStory = async (storyIndex: number) => {
+    // Get the story ID from the story at the given index in "Your Story"
+    const storyToDelete = stories[0]?.stories[storyIndex];
+    if (!storyToDelete) {
+      toast.error("Story not found");
+      return false;
+    }
+
+    const success = await deleteStory(storyToDelete.storyId);
+    if (success) {
+      toast.success("Story deleted successfully");
+      
+      // Remove the deleted story from "Your Story" (index 0)
+      setStories(prev => 
+        prev.map((user, idx) => {
+          if (idx === 0) { // Only update "Your Story"
+            const updatedStories = user.stories.filter((_, index) => index !== storyIndex);
+            return {
+              ...user,
+              stories: updatedStories
+            };
+          }
+          return user;
+        })
+      );
+      
+      return true;
+    } else {
+      toast.error("Failed to delete story");
+      return false;
     }
   };
 
@@ -363,6 +396,7 @@ export function StoryList() {
           initialStoryIndex={selectedStory.storyIndex}
           onClose={handleStoryClose}
           onStoryChange={handleStoryChange}
+          onStoryDelete={handleDeleteStory}
         />
       )}
 

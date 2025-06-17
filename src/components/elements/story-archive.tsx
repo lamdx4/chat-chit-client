@@ -128,15 +128,9 @@ export function StoryArchive({ stories = [] }: StoryArchiveProps) {
                 className="w-full h-full object-cover"
               />
               
-              {/* Overlay with stats */}
+              {/* Hover overlay with stats only */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <div className="text-white">
-                  {story.text && (
-                    <div className="text-lg font-bold mb-2">
-                      {story.text}
-                    </div>
-                  )}
-                  
                   {/* Bottom stats */}
                   <div className="flex items-center gap-4">
                     {/* Heart/Like count */}
@@ -199,15 +193,18 @@ export function StoryArchive({ stories = [] }: StoryArchiveProps) {
                   style={{ objectFit: 'contain' }}
                 />
 
+                {/* Story text overlay - centered */}
+                {currentStory.text && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <p className="text-white text-center text-2xl font-bold break-words max-w-xs mx-4">
+                      {currentStory.text}
+                    </p>
+                  </div>
+                )}
+
                 {/* Story overlay with stats */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
                   <div className="text-white">
-                    {currentStory.text && (
-                      <div className="text-lg font-bold mb-3">
-                        {currentStory.text}
-                      </div>
-                    )}
-                    
                     {/* Heart button */}
                     <div className="flex justify-start">
                       <button 
