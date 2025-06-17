@@ -4,9 +4,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { StoryViewer } from "./story-viewer";
 import { StoryCreate } from "@/components/elements/story-create";
-import { createStory, getFriendsStoriesList, viewStory, getUserStories, deleteStory  } from "@/services/story.service";
+import { createStory, getFriendsStoriesList, viewStory, getUserStories, deleteStory, reactToStory } from "@/services/story.service";
 import { toast } from "sonner";
-import {StoryUserWithItems } from "@/types/story";
+import { StoryUserWithItems } from "@/types/story";
 
 
 export function StoryList() {
@@ -214,6 +214,36 @@ export function StoryList() {
     }
   };
 
+  const handleStoryReact = async (userIndex: number, storyIndex: number) => {
+    const currentStory = stories[userIndex]?.stories[storyIndex];
+    
+    // Only react if story hasn't been reacted to
+    if (!currentStory.isReacted) {
+      const success = await reactToStory(currentStory.storyId);
+      if (success) {
+        // Update the story's react status locally
+        setStories(prev => 
+          prev.map((user, idx) => {
+            if (idx === userIndex) {
+              const updatedStories = user.stories.map((story, sIdx) => 
+                sIdx === storyIndex ? { ...story, isReacted: true } : story
+              );
+              
+              return {
+                ...user,
+                stories: updatedStories
+              };
+            }
+            return user;
+          })
+        );
+      } else {
+        toast.error("Failed to react to story");
+        return;
+      }
+    }
+  };
+
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
     const storyTime = new Date(timestamp)
@@ -397,6 +427,7 @@ export function StoryList() {
           onClose={handleStoryClose}
           onStoryChange={handleStoryChange}
           onStoryDelete={handleDeleteStory}
+          onStoryReact={handleStoryReact}
         />
       )}
 

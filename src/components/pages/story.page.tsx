@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StoryList } from "../elements/story-list";
 import { StoryWithUser } from "@/types/story";
-import { getRecentStories } from "@/services/story.service";
+import { getRecentStories, reactToStory } from "@/services/story.service";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StoryViewer } from "../elements/story-viewer";
@@ -13,6 +13,7 @@ import { StoryUserWithItems } from "@/types/story";
 import useAuth from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
 import { viewStory } from "@/services/story.service";
+import { toast } from "sonner";
 
 export default function StoryPage() {
   const [recentStories, setRecentStories] = useState<StoryWithUser[]>([]);
@@ -95,6 +96,44 @@ export default function StoryPage() {
   const closeViewer = () => {
     setShowViewer(false);
     setSelectedStory(null);
+  };
+
+  const handleStoryReact = async (userIndex: number, storyIndex: number) => {
+    if (!selectedStory) return;
+    
+    const currentStory = selectedStory.stories[storyIndex];
+    
+    // Only react if story hasn't been reacted to
+    if (!currentStory.isReacted) {
+      const success = await reactToStory(currentStory.storyId);
+      if (success) {
+        // Update the story's react status locally
+        setSelectedStory(prev => {
+          if (!prev) return prev;
+          
+          const updatedStories = prev.stories.map((story, sIdx) => 
+            sIdx === storyIndex ? { ...story, isReacted: true } : story
+          );
+          
+          return {
+            ...prev,
+            stories: updatedStories
+          };
+        });
+        
+        // Also update the recent stories list
+        setRecentStories(prev =>
+          prev.map(story =>
+            story.storyId === currentStory.storyId
+              ? { ...story, isReacted: true }
+              : story
+          )
+        );
+      } else {
+        toast.error("Failed to react to story");
+        return;
+      }
+    }
   };
 
   const handleArchiveClick = () => {
@@ -318,6 +357,7 @@ export default function StoryPage() {
           initialUserIndex={0}
           initialStoryIndex={0}
           onClose={closeViewer}
+          onStoryReact={handleStoryReact}
         />
       )}
     </div>

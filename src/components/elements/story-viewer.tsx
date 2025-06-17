@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { StoryUserWithItems } from "@/types/story"
 import { StoryViewInteract } from "./story-view-interact"
-import { archiveStory, reactToStory } from "@/services/story.service"
+import { archiveStory} from "@/services/story.service"
 import { toast } from "sonner"
+import { on } from "events"
 
 
 interface StoryViewerProps {
@@ -17,6 +18,7 @@ interface StoryViewerProps {
   onClose: () => void
   onStoryChange?: (userIndex: number, storyIndex: number) => void
   onStoryDelete?: (storyIndex: number) => void
+  onStoryReact?: (userIndex: number, storyIndex: number) => void
 }
 
 export function StoryViewer({
@@ -26,6 +28,7 @@ export function StoryViewer({
   onClose,
   onStoryChange,
   onStoryDelete,
+  onStoryReact,
 }: StoryViewerProps) {
   const [currentUserIndex, setCurrentUserIndex] = useState(initialUserIndex)
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex)
@@ -165,20 +168,11 @@ export function StoryViewer({
     }
   }
 
-  const handleHeartClick = async (e: React.MouseEvent) => {
+  const handleHeartClick = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent story navigation
     
-    // Only react if story hasn't been reacted to
-    if (!currentStory.isReacted) {
-      const success = await reactToStory(currentStory.storyId)
-      if (success) {
-        // Update the story's react status locally
-        currentStory.isReacted = true
-      } else {
-        toast.error("Failed to react to story")
-        return
-      }
-    }
+    onStoryReact?.(currentUserIndex, currentStoryIndex)
+
     
     // Toggle heart liked state for animation
     setIsHeartLiked(!isHeartLiked)
@@ -196,7 +190,7 @@ export function StoryViewer({
     setTimeout(() => {
       setHearts(prev => prev.filter(heart => heart.id !== newHeart.id))
     }, 2000)
-  }
+  }, [currentUserIndex, currentStoryIndex, isHeartLiked, onStoryReact])
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
