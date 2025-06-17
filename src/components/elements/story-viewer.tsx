@@ -1,6 +1,3 @@
-"use client"
-
-import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate } from "react-router"
 import { X, ChevronLeft, ChevronRight, Heart, Pause, Play, Volume2, VolumeX, MoreVertical, Archive, Trash2, Eye } from "lucide-react"
@@ -11,6 +8,7 @@ import { StoryUserWithItems } from "@/types/story"
 import { StoryViewInteract } from "./story-view-interact"
 import { archiveStory } from "@/services/story.service"
 import { toast } from "sonner"
+import { reactToStory } from "@/services/story.service"
 
 interface StoryViewerProps {
   stories: StoryUserWithItems[]
@@ -18,7 +16,6 @@ interface StoryViewerProps {
   initialStoryIndex: number
   onClose: () => void
   onStoryChange?: (userIndex: number, storyIndex: number) => void
-  onStoryReact?: (userIndex: number, storyIndex: number) => void
 }
 
 export function StoryViewer({
@@ -27,7 +24,6 @@ export function StoryViewer({
   initialStoryIndex,
   onClose,
   onStoryChange,
-  onStoryReact,
 }: StoryViewerProps) {
   const [currentUserIndex, setCurrentUserIndex] = useState(initialUserIndex)
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex)
@@ -167,11 +163,22 @@ export function StoryViewer({
     }
   }
 
-  const handleHeartClick = useCallback((e: React.MouseEvent) => {
+  const handleHeartClick = async (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent story navigation
     
+    // Only react if story hasn't been reacted to
+    if (!currentStory.isReacted) {
+      const success = await reactToStory(currentStory.storyId)
+      if (success) {
+        // Update the story's react status locally
+        currentStory.isReacted = true
+      } else {
+        toast.error("Failed to react to story")
+        return
+      }
+    }
     
-    // Toggle heart liked state
+    // Toggle heart liked state for animation
     setIsHeartLiked(!isHeartLiked)
     
     // Create heart animation
@@ -187,11 +194,7 @@ export function StoryViewer({
     setTimeout(() => {
       setHearts(prev => prev.filter(heart => heart.id !== newHeart.id))
     }, 2000)
-    
-    // Call the story react callback
-    onStoryReact?.(currentUserIndex, currentStoryIndex)
-    
-  }, [isHeartLiked, currentUserIndex, currentStoryIndex, onStoryReact])
+  }
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()

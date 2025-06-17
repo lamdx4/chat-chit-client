@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { StoryViewer } from "./story-viewer";
 import { StoryCreate } from "@/components/elements/story-create";
-import { createStory, getFriendsStoriesList, viewStory, getUserStories, reactToStory  } from "@/services/story.service";
+import { createStory, getFriendsStoriesList, viewStory, getUserStories  } from "@/services/story.service";
 import { toast } from "sonner";
 import {StoryUserWithItems } from "@/types/story";
 
@@ -145,35 +145,6 @@ export function StoryList() {
 
   const handleStoryClose = () => {
     setSelectedStory(null);
-  };
-
-  const handleReactToStory = async (userIndex: number, storyIndex: number) => {
-    const currentStory = stories[userIndex]?.stories[storyIndex];
-    if (!currentStory) return;
-    
-    if (currentStory.isReacted) return;
-    
-    const success = await reactToStory(currentStory.storyId);
-    
-    if (success) {
-      // Update local state to mark the story as reacted
-      setStories(prev => 
-        prev.map((user, idx) => {
-          if (idx === userIndex) {
-            const updatedStories = user.stories.map((story, sIdx) => 
-              sIdx === storyIndex ? { ...story, isReacted: true } : story
-            );
-            return {
-              ...user,
-              stories: updatedStories
-            };
-          }
-          return user;
-        })
-      );
-    } else {
-      toast.error("Failed to add reaction");
-    }
   };
 
   const handleStoryChange = async (userIndex: number, storyIndex: number) => {
@@ -392,7 +363,6 @@ export function StoryList() {
           initialStoryIndex={selectedStory.storyIndex}
           onClose={handleStoryClose}
           onStoryChange={handleStoryChange}
-          onStoryReact={handleReactToStory}
         />
       )}
 

@@ -12,6 +12,7 @@ import { StoryViewer } from "../elements/story-viewer";
 import { StoryUserWithItems } from "@/types/story";
 import useAuth from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
+import { viewStory } from "@/services/story.service";
 
 export default function StoryPage() {
   const [recentStories, setRecentStories] = useState<StoryWithUser[]>([]);
@@ -50,7 +51,7 @@ export default function StoryPage() {
     return `${diffInHours}h`;
   };
 
-  const handleStoryClick = (story: StoryWithUser) => {
+  const handleStoryClick = async (story: StoryWithUser) => {
     // Convert StoryWithUser to StoryUserWithItems format
     const storyUserWithItems: StoryUserWithItems = {
       userId: story.user.userId,
@@ -69,6 +70,23 @@ export default function StoryPage() {
         }
       ]
     };
+    
+    // If story is not viewed, mark it as viewed
+    if (!story.isViewed) {
+      const success = await viewStory(story.storyId);
+      if (success) {
+        // Update local state
+        setRecentStories(prevStories =>
+          prevStories.map(s =>
+            s.storyId === story.storyId
+              ? { ...s, isViewed: true }
+              : s
+          )
+        );
+        // Update the story viewer data as well
+        storyUserWithItems.stories[0].isViewed = true;
+      }
+    }
     
     setSelectedStory(storyUserWithItems);
     setShowViewer(true);
