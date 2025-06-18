@@ -116,9 +116,9 @@ export async function getArchivedStories(userId?: number): Promise<UserStoryArch
 }
 
 
-export async function archiveStory(storyId: number): Promise<boolean> {
+export async function archiveStory(storyId: number, status: boolean): Promise<boolean> {
   try {
-    await axios_auth.post(`/story/${storyId}/archive`);
+    await axios_auth.patch(`/story/${storyId}/archive`, { status });
     return true;
   } catch (error) {
     console.error(error);

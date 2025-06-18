@@ -43,7 +43,7 @@ import { StoryViewer } from "@/components/elements/story-viewer";
 import { getUserStories, getArchivedStories } from "@/services/story.service";
 import { StoryItem, ArchivedStoryItem } from "@/types/story";
 import StoryArchive from "@/components/elements/story-archive";
-import { viewStory, deleteStory } from "@/services/story.service";
+import { viewStory, deleteStory, reactToStory, archiveStory } from "@/services/story.service";
 
 export default function UserProfile() {
   const navigate = useNavigate();
@@ -168,11 +168,86 @@ export default function UserProfile() {
     }
   };
 
+  const handleStoryReact = async (userIndex: number, storyIndex: number) => {
+    const currentStory = userStories[storyIndex];
+    
+    if (!currentStory) {
+      toast.error("Story not found");
+      return;
+    }
+    
+    // Only react if story hasn't been reacted to
+    if (!currentStory.isReacted) {
+      const success = await reactToStory(currentStory.storyId);
+      if (success) {
+        // Update the story's react status locally
+        setUserStories(prev => 
+          prev.map((story, index) => 
+            index === storyIndex ? { ...story, isReacted: true } : story
+          )
+        );
+      } else {
+        toast.error("Failed to react to story");
+        return;
+      }
+    }
+  };
+
   const handleClick = () => {
     if (userStories.length > 0) {
       setShowStoryViewer(true);
       // Call viewStory for the first story if not viewed
       handleStoryChange(0, 0);
+    }
+  };
+
+  const handleArchivedStoryClick = async (storyId: number) => {
+    const currentStory = archivedStories.find(story => story.storyId === storyId);
+    if (!currentStory || currentStory.isViewed) return;
+    
+    const success = await viewStory(storyId);
+    if (success) {
+      setArchivedStories(prev => 
+        prev.map(story => 
+          story.storyId === storyId 
+            ? { 
+                ...story, 
+                isViewed: true,
+                viewCount: Number(story.viewCount) + 1
+              }
+            : story
+        )
+      );
+    }
+  };
+
+  const handleArchivedStoryHeartClick = async (storyId: number) => {
+    const currentStory = archivedStories.find(story => story.storyId === storyId);
+    if (!currentStory || currentStory.isReacted) return;
+    
+    const success = await reactToStory(storyId);
+    if (success) {
+      setArchivedStories(prev => 
+        prev.map(story => 
+          story.storyId === storyId 
+            ? { 
+                ...story, 
+                isReacted: true,
+                reactCount: Number(story.reactCount) + 1
+              }
+            : story
+        )
+      );
+    }
+  };
+
+  const handleRemoveFromArchive = async (storyId: number) => {
+    const success = await archiveStory(storyId, false);
+    if (success) {
+      toast.success("Story removed from archive successfully");
+      setArchivedStories(prev => prev.filter(story => story.storyId !== storyId));
+    } else {
+      toast.error("Failed to remove story from archive");
     }
   };
 
@@ -393,7 +468,13 @@ export default function UserProfile() {
 
       {/* Story Archive Section */}
       <div className="mb-8">
-        <StoryArchive stories={archivedStories} />
+        <StoryArchive 
+          stories={archivedStories} 
+          isMe={isOwnProfile}
+          onStoryClick={handleArchivedStoryClick}
+          onHeartClick={handleArchivedStoryHeartClick}
+          onRemoveFromArchive={handleRemoveFromArchive}
+        />
       </div>
 
       {/* Story Viewer */}
@@ -415,6 +496,7 @@ export default function UserProfile() {
             onClose={() => setShowStoryViewer(false)}
             onStoryChange={handleStoryChange}
             onStoryDelete={handleDeleteStory}
+            onStoryReact={handleStoryReact}
           />
         )}
 

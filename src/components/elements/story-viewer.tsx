@@ -8,7 +8,6 @@ import { StoryUserWithItems } from "@/types/story"
 import { StoryViewInteract } from "./story-view-interact"
 import { archiveStory} from "@/services/story.service"
 import { toast } from "sonner"
-import { on } from "events"
 
 
 interface StoryViewerProps {
@@ -226,12 +225,11 @@ export function StoryViewer({
 
   // Temporary handlers for three-dot menu
   const handleAddToArchive = async () => {
-    try {
-      await archiveStory(currentStory.storyId)
-      setIsMenuOpen(false)
+    const success = await archiveStory(currentStory.storyId, true)
+    setIsMenuOpen(false)
+    if (success) {
       toast.success("Story archived successfully")
-    } catch (error) {
-      console.error("Failed to archive story:", error)
+    } else {
       toast.error("Failed to archive story")
     }
   }

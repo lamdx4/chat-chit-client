@@ -214,17 +214,31 @@ export function StoryList() {
     }
   };
 
-  const handleStoryReact = async (userIndex: number, storyIndex: number) => {
-    const currentStory = stories[userIndex]?.stories[storyIndex];
+  const handleStoryReact = async (filteredUserIndex: number, storyIndex: number) => {
+    // Get the filtered stories array (same as what's passed to StoryViewer)
+    const filteredStories = stories.filter((user) => user.stories.length > 0);
+    const targetUser = filteredStories[filteredUserIndex];
+    
+    if (!targetUser) {
+      toast.error("User not found");
+      return;
+    }
+
+    const currentStory = targetUser.stories[storyIndex];
+    
+    if (!currentStory) {
+      toast.error("Story not found");
+      return;
+    }
     
     // Only react if story hasn't been reacted to
     if (!currentStory.isReacted) {
       const success = await reactToStory(currentStory.storyId);
       if (success) {
-        // Update the story's react status locally
+        // Update the story's react status locally using userId to find the correct user
         setStories(prev => 
-          prev.map((user, idx) => {
-            if (idx === userIndex) {
+          prev.map((user) => {
+            if (user.userId === targetUser.userId) {
               const updatedStories = user.stories.map((story, sIdx) => 
                 sIdx === storyIndex ? { ...story, isReacted: true } : story
               );

@@ -1,15 +1,30 @@
 import { ArchivedStoryItem } from "@/types/story";
 import { useState, useEffect } from "react";
-import { viewStory, reactToStory } from "@/services/story.service";
+import { MoreVertical, Eye, Archive } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { StoryViewInteract } from "./story-view-interact";
 
 interface StoryArchiveProps {
   stories?: ArchivedStoryItem[];
+  isMe?: boolean;
+  onStoryClick?: (storyId: number) => Promise<void>;
+  onHeartClick?: (storyId: number) => Promise<void>;
+  onRemoveFromArchive?: (storyId: number) => Promise<void>;
 }
 
-export function StoryArchive({ stories = [] }: StoryArchiveProps) {
+export function StoryArchive({ 
+  stories = [], 
+  isMe = false, 
+  onStoryClick,
+  onHeartClick,
+  onRemoveFromArchive 
+}: StoryArchiveProps) {
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [localStories, setLocalStories] = useState(stories);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showInteractModal, setShowInteractModal] = useState(false);
 
   // Update local stories when props change
   useEffect(() => {
@@ -34,10 +49,10 @@ export function StoryArchive({ stories = [] }: StoryArchiveProps) {
     );
   }
 
-  const openStoryModal = (index: number) => {
+  const openStoryModal = async (index: number) => {
     const story = storiesToRender[index];
-    if (story) {
-      handleStoryClick(story.storyId);
+    if (story && onStoryClick) {
+      await onStoryClick(story.storyId);
     }
     setSelectedStoryIndex(index);
     setIsModalOpen(true);
@@ -66,50 +81,23 @@ export function StoryArchive({ stories = [] }: StoryArchiveProps) {
     e.stopPropagation();
     
     const currentStory = storiesToRender.find(story => story.storyId === storyId);
-    if (!currentStory) return;
+    if (!currentStory || currentStory.isReacted || !onHeartClick) return;
     
-    // Only update if current reaction state is false (not reacted yet)
-    if (!currentStory.isReacted) {
-      const success = await reactToStory(storyId);
-      if (success) {
-        // Update the stories array to set isReacted to true and increment reactCount
-        setLocalStories(prev => 
-          prev.map(story => 
-            story.storyId === storyId 
-              ? { 
-                  ...story, 
-                  isReacted: true,
-                  reactCount: Number(story.reactCount) + 1
-                }
-              : story
-          )
-        );
-      }
-    }
+    await onHeartClick(storyId);
   };
 
-  const handleStoryClick = async (storyId: number) => {
-    const currentStory = storiesToRender.find(story => story.storyId === storyId);
-    if (!currentStory) return;
+  const handleRemoveFromArchive = async () => {
+    const currentStory = storiesToRender[selectedStoryIndex];
+    if (!currentStory || !onRemoveFromArchive) return;
     
-    // Only update if current viewed state is false (not viewed yet)
-    if (!currentStory.isViewed) {
-      const success = await viewStory(storyId);
-      if (success) {
-        // Update the stories array to set isViewed to true and increment viewCount
-        setLocalStories(prev => 
-          prev.map(story => 
-            story.storyId === storyId 
-              ? { 
-                  ...story, 
-                  isViewed: true,
-                  viewCount: Number(story.viewCount) + 1
-                }
-              : story
-          )
-        );
-      }
-    }
+    setIsMenuOpen(false);
+    await onRemoveFromArchive(currentStory.storyId);
+    closeModal();
+  };
+
+  const handleViewInteractions = () => {
+    setIsMenuOpen(false);
+    setShowInteractModal(true);
   };
 
   return (
@@ -174,13 +162,47 @@ export function StoryArchive({ stories = [] }: StoryArchiveProps) {
 
             {/* Story Container */}
             <div className="relative max-w-md w-full">
-              {/* Close button */}
-              <button
-                onClick={closeModal}
-                className="absolute -top-12 right-0 text-white text-2xl hover:text-gray-300"
-              >
-                ✕
-              </button>
+              {/* Header with close button and three-dot menu */}
+              <div className="absolute -top-12 left-0 right-0 flex items-center justify-between">
+                <div></div> {/* Empty div for spacing */}
+                <div className="flex items-center gap-3">
+                  {/* Three-dot menu for user's own stories */}
+                  {isMe && (
+                    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 text-white hover:bg-white/20"
+                        >
+                          <MoreVertical className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent 
+                        className="w-56" 
+                        align="end"
+                      >
+                        <DropdownMenuItem onClick={handleViewInteractions}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Interactions
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleRemoveFromArchive}>
+                          <Archive className="h-4 w-4 mr-2" />
+                          Remove from Archive
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
+                  {/* Close button */}
+                  <button
+                    onClick={closeModal}
+                    className="text-white text-2xl hover:text-gray-300 w-10 h-10 flex items-center justify-center"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
 
               {/* Story content */}
               <div 
@@ -257,6 +279,15 @@ export function StoryArchive({ stories = [] }: StoryArchiveProps) {
               </button>
             )}
           </div>
+
+          {/* Story Interactions Modal */}
+          {currentStory && (
+            <StoryViewInteract
+              isOpen={showInteractModal}
+              onClose={() => setShowInteractModal(false)}
+              storyId={currentStory.storyId}
+            />
+          )}
         </div>
       )}
     </>
