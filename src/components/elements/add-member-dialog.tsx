@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, X, Loader2, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -17,11 +16,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useFriends } from "@/hooks/use-relationship";
 import { InfiniteScrollTrigger } from "./infinite-roll-trigger";
 import { GetFriendListRes } from "@/services/types/friend-list";
-import { axios_auth } from "@/config/axios-auth";
-import { ResponseData } from "@/types/response.types";
 import { toast } from "sonner";
+import { useChatContext } from "@/hooks/use-chat";
+import { chatService } from "@/services/group-service";
 
-export function CreateGroupChatDialog({
+export function AddMemberDialog({
   open,
   setOpen,
 }: {
@@ -65,35 +64,38 @@ export function CreateGroupChatDialog({
     );
   };
 
-  const handleCreateConversation = async () => {
-    if (selectedFriends.length < 2) {
-      setError("Please select at least 2 friends");
+  const handlerAddMemberToGroup = async () => {
+    if (selectedFriends.length < 1) {
+      setError("Please select at least 1 friends");
       return;
     }
     setIsSubmitting(true);
     try {
-      await axios_auth
-        .post<ResponseData<object>>("group/create", {
-          name: conversationName || "Group Chat with Friends",
-          members: selectedFriends.map((f) => f.targetUser.userId),
-        })
+      chatService
+        .addMemberToGroup(
+          selectedGroupId!,
+          selectedFriends.map((f) => f.targetUser.userId)
+        )
         .then((res) => {
           if (res.status === 200) {
-            toast.success("Conversation created successfully");
+            toast.success("Added members to group successfully");
             setOpen(false);
             resetForm();
           } else if (res.status === 400) {
             if (res.data.message === "NOT_ALL_MEMBERS_ARE_FRIENDS") {
-              setError("All selected members must be your friends.");
-              toast.error("All selected members must be your friends.");
+              setError(
+                "You can only add friends to the group. Please make sure all selected members are your friends."
+              );
             }
           } else {
-            toast.error("Failed to create conversation");
+            setError("Failed to add members to the group. Please try again.");
+            console.error("Unexpected response:", res);
           }
         })
         .catch((error) => {
-          console.error("Failed to create conversation:", error);
-          toast.error("Failed to create conversation");
+          console.error("Error adding members to group:", error);
+          setError("Failed to add members to the group. Please try again.");
+          toast.error("Failed to add members to the group. Please try again.");
         })
         .finally(() => {
           setOpen(false);
@@ -117,6 +119,17 @@ export function CreateGroupChatDialog({
 
   const showSelectedPanel = selectedFriends.length > 0;
 
+  const { selectedGroupId, groups } = useChatContext();
+
+  const group = useMemo(() => {
+    return groups.find((g) => g.groupId === selectedGroupId);
+  }, [selectedGroupId, groups]);
+
+  if (!group) {
+    console.error("Selected group not found in context");
+    return null;
+  }
+
   return (
     <Dialog
       open={open}
@@ -127,11 +140,7 @@ export function CreateGroupChatDialog({
     >
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle>Create New Group Chat</DialogTitle>
-          <DialogDescription>
-            Start a new conversation with your friends. You need to select at
-            least 2 friends.
-          </DialogDescription>
+          <DialogTitle>Add New Member To Group Chat</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-1 h-[500px] overflow-hidden">
@@ -195,6 +204,13 @@ export function CreateGroupChatDialog({
                   data?.pages.map((listData) =>
                     listData.data.dataPag.map((friend) => (
                       <div
+                        hidden={
+                          group.members.find(
+                            (member) => member.userId === friend.targetUserId
+                          )
+                            ? true
+                            : false
+                        }
                         key={friend.targetUserId}
                         className={`flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-md cursor-pointer ${
                           selectedFriends.some(
@@ -206,6 +222,7 @@ export function CreateGroupChatDialog({
                         onClick={() => toggleFriendSelection(friend)}
                       >
                         <Checkbox
+                          className="h-5 w-5 "
                           id={`friend-${friend.targetUserId}`}
                           checked={selectedFriends.some(
                             (f) => f.targetUserId === friend.targetUserId
@@ -306,13 +323,13 @@ export function CreateGroupChatDialog({
                 Cancel
               </Button>
               <Button
-                onClick={handleCreateConversation}
-                disabled={selectedFriends.length < 2 || isSubmitting}
+                onClick={handlerAddMemberToGroup}
+                disabled={selectedFriends.length < 1 || isSubmitting}
                 className="gap-2"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Users className="h-4 w-4 mr-1" />
-                Create Group
+                Add Members
               </Button>
             </div>
           </div>

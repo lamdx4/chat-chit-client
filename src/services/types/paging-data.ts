@@ -1,5 +1,5 @@
 export default interface PagingData<T> {
-  data: T[];
+  dataPag: T[];
   nextCursor: number;
-  hasNext: boolean;
+  hasMore: boolean;
 }
