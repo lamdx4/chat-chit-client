@@ -39,11 +39,21 @@ import {
 } from "../ui/dropdown-menu";
 import copyableText from "@/utils/copy-to-clip-board";
 import { toast } from "sonner";
+import { StoryViewer } from "@/components/elements/story-viewer";
+import { getUserStories, getArchivedStories } from "@/services/story.service";
+import { StoryItem, ArchivedStoryItem } from "@/types/story";
+import StoryArchive from "@/components/elements/story-archive";
+import { viewStory, deleteStory, reactToStory, archiveStory } from "@/services/story.service";
 
 export default function UserProfile() {
   const navigate = useNavigate();
   const [userInformation, setUserInformation] = useState<User | null>(null);
   const [isUserNotFound, setIsUserNotFound] = useState(false);
+  const [userStories, setUserStories] = useState<StoryItem[]>([]);
+  const [archivedStories, setArchivedStories] = useState<ArchivedStoryItem[]>(
+    []
+  );
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
   const auth = useAuth();
   const params = useParams();
   const userName = params.userName;
@@ -82,6 +92,165 @@ export default function UserProfile() {
       });
   }, [userName]);
 
+  useEffect(() => {
+    if (userInformation?.userId) {
+      getUserStories(userInformation.userId)
+        .then((res) => {
+          if (res && res.stories) {
+            setUserStories(res.stories);
+          } else {
+            setUserStories([]);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch user stories:", error);
+          setUserStories([]);
+        });
+
+      // Fetch archived stories with debugging
+      console.log(
+        "Fetching archived stories for user:",
+        userInformation.userId
+      );
+      getArchivedStories(userInformation.userId)
+        .then((res) => {
+          console.log("Archived stories response:", res);
+          if (res && res.stories) {
+            console.log("Setting archived stories:", res.stories);
+            setArchivedStories(res.stories);
+          } else {
+            console.log("No archived stories found");
+            setArchivedStories([]);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch archived stories:", error);
+          setArchivedStories([]);
+        });
+    }
+  }, [userInformation?.userId]);
+
+  const handleStoryChange = async (_userIndex: number, storyIndex: number) => {
+    const story = userStories[storyIndex];
+    if (story && !story.isViewed) {
+      const result = await viewStory(story.storyId);
+      if (result) {
+        // Update local state to mark story as viewed
+        setUserStories((prev) => {
+          const updatedStories = prev.map((s, index) =>
+            index === storyIndex ? { ...s, isViewed: true } : s
+          );          
+          return updatedStories;
+        });
+      }
+    }
+  };
+
+  const handleDeleteStory = async (storyIndex: number) => {
+    // Get the story ID from the story at the given index
+    const storyToDelete = userStories[storyIndex];
+    if (!storyToDelete) {
+      toast.error("Story not found");
+      return false;
+    }
+
+    const success = await deleteStory(storyToDelete.storyId);
+    if (success) {
+      toast.success("Story deleted successfully");
+      
+      // Remove the deleted story from userStories
+      setUserStories(prev => prev.filter((_, index) => index !== storyIndex));
+      
+      return true;
+    } else {
+      toast.error("Failed to delete story");
+      return false;
+    }
+  };
+
+  const handleStoryReact = async (_userIndex: number, storyIndex: number) => {
+    const currentStory = userStories[storyIndex];
+      
+    if (!currentStory) {
+      toast.error("Story not found");
+      return;
+    }
+    
+    // Only react if story hasn't been reacted to
+    if (!currentStory.isReacted) {
+      const success = await reactToStory(currentStory.storyId);
+      if (success) {
+        // Update the story's react status locally
+        setUserStories(prev => 
+          prev.map((story, index) => 
+            index === storyIndex ? { ...story, isReacted: true } : story
+          )
+        );
+      } else {
+        toast.error("Failed to react to story");
+        return;
+      }
+    }
+  };
+
+  const handleClick = () => {
+    if (userStories.length > 0) {
+      setShowStoryViewer(true);
+      // Call viewStory for the first story if not viewed
+      handleStoryChange(0, 0);
+    }
+  };
+
+  const handleArchivedStoryClick = async (storyId: number) => {
+    const currentStory = archivedStories.find(story => story.storyId === storyId);
+    if (!currentStory || currentStory.isViewed) return;
+    
+    const success = await viewStory(storyId);
+    if (success) {
+      setArchivedStories(prev => 
+        prev.map(story => 
+          story.storyId === storyId 
+            ? { 
+                ...story, 
+                isViewed: true,
+                viewCount: Number(story.viewCount) + 1
+              }
+            : story
+        )
+      );
+    }
+  };
+
+  const handleArchivedStoryHeartClick = async (storyId: number) => {
+    const currentStory = archivedStories.find(story => story.storyId === storyId);
+    if (!currentStory || currentStory.isReacted) return;
+    
+    const success = await reactToStory(storyId);
+    if (success) {
+      setArchivedStories(prev => 
+        prev.map(story => 
+          story.storyId === storyId 
+            ? { 
+                ...story, 
+                isReacted: true,
+                reactCount: Number(story.reactCount) + 1
+              }
+            : story
+        )
+      );
+    }
+  };
+
+  const handleRemoveFromArchive = async (storyId: number) => {
+    const success = await archiveStory(storyId, false);
+    if (success) {
+      toast.success("Story removed from archive successfully");
+      setArchivedStories(prev => prev.filter(story => story.storyId !== storyId));
+    } else {
+      toast.error("Failed to remove story from archive");
+    }
+  };
+
   if (!userName) {
     return <NotFoundElement />;
   }
@@ -96,7 +265,16 @@ export default function UserProfile() {
       <div className="flex flex-col md:flex-row justify-center items-center md:items-center gap-17 mb-8">
         {/* Profile Picture */}
         <div className="relative w-35 h-35 md:w-35 md:h-35">
-          <div className="absolute inset-0 rounded-full border-2 border-gray-200 dark:border-gray-700">
+          <div
+            className={`absolute inset-0 rounded-full  ${
+              userStories.length > 0
+                ? userStories.every((story) => story.isViewed)
+                  ? "border-gray-200 dark:border-gray-700 border-2 cursor-pointer hover:scale-105 transition-transform"
+                  : "bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-400 p-1 cursor-pointer hover:scale-105 transition-transform"
+                : "border-gray-200 dark:border-gray-700 border-2"
+            }`}
+            onClick={handleClick}
+          >
             <div className="rounded-full bg-white p-0.5 h-full w-full">
               <Avatar className="h-full w-full rounded-full overflow-hidden">
                 {userInformation.avatar ? (
@@ -287,28 +465,63 @@ export default function UserProfile() {
         </div>
       </div>
       <Separator className="my-4" />
-      {/* 
-      Content Tabs
-      <Tabs defaultValue="posts" className="w-full">
-        <TabsList className="w-full justify-center">
-          <TabsTrigger value="posts" className="flex-1">
-            STORY
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="posts">
-          <div className="grid grid-cols-3 gap-1">
-            {[...Array(9)].map((_, i) => (
-              <div key={i} className="aspect-square">
-                <img
-                  src="/placeholder.svg"
-                  alt={`Post ${i + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs> */}
+
+      {/* Story Archive Section */}
+      <div className="mb-8">
+        <StoryArchive 
+          stories={archivedStories} 
+          isMe={isOwnProfile}
+          onStoryClick={handleArchivedStoryClick}
+          onHeartClick={handleArchivedStoryHeartClick}
+          onRemoveFromArchive={handleRemoveFromArchive}
+        />
+      </div>
+
+      {/* Story Viewer */}
+        {showStoryViewer && userStories.length > 0 && (
+          <StoryViewer
+            stories={[
+          {
+            userId: userInformation.userId,
+            userName: isOwnProfile ? "Your Story" : userInformation.userName,
+            avatar: userInformation.avatar
+              ? getUrlFile(userInformation.avatar)
+              : "/placeholder.svg",
+            stories: userStories,
+            isViewed: false,
+          },
+            ]}
+            initialUserIndex={0}
+            initialStoryIndex={0}
+            onClose={() => setShowStoryViewer(false)}
+            onStoryChange={handleStoryChange}
+            onStoryDelete={handleDeleteStory}
+            onStoryReact={handleStoryReact}
+          />
+        )}
+
+        {/* 
+        Content Tabs
+        <Tabs defaultValue="posts" className="w-full">
+          <TabsList className="w-full justify-center">
+            <TabsTrigger value="posts" className="flex-1">
+          STORY
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="posts">
+            <div className="grid grid-cols-3 gap-1">
+          {[...Array(9)].map((_, i) => (
+            <div key={i} className="aspect-square">
+              <img
+            src="/placeholder.svg"
+            alt={`Post ${i + 1}`}
+            className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+            </div>
+          </TabsContent>
+        </Tabs> */}
     </div>
   ) : isUserNotFound ? (
     <NotFoundElement />

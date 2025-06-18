@@ -7,6 +7,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Outlet, useNavigate, useLocation } from "react-router";
@@ -51,6 +52,11 @@ function MainLayout() {
       icon: <Users className="h-[18px] w-[18px]" />,
       label: "Friends",
     },
+    {
+      path: "story",
+      icon: <BookOpen className="h-[18px] w-[18px]" />,
+      label: "Stories",
+    },    
     {
       path: "notification",
       icon: <Bell className="h-[18px] w-[18px]" />,
