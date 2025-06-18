@@ -1,7 +1,7 @@
 import Reaction from "./react.model";
 import { Member } from "./member.model";
 import { Poll } from "./poll.model";
-import { File } from "./file.model";
+import { FileServer } from "./file.model";
 
 export enum MessageType {
   Text = "Text",
@@ -9,6 +9,7 @@ export enum MessageType {
   File = "File",
   Notification = "Notification",
   Contact = "Contact",
+  Poll = "Poll",
 }
 
 export enum MessageStatus {
@@ -32,8 +33,8 @@ export default interface Message {
   ownerMember: Member;
   replyMessage?: Message;
   inverseReplyMessage?: Message[];
-  reactions?: Reaction[];
+  reactions: Reaction[];
   manipulateMembers: Member[];
   poll?: Poll;
-  files: File[];
+  files: FileServer[];
 }

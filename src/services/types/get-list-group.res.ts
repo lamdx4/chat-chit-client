@@ -1,9 +1,11 @@
 import { Member, MemberStatusType } from "@/types/member.model";
-import { MessageStatus, MessageType } from "@/types/message.model";
+import Message, { MessageStatus, MessageType } from "@/types/message.model";
 import User from "@/types/user";
-import { File } from "@/types/file.model";
+import { FileServer } from "@/types/file.model";
 
 export interface GroupDataRes {
+  messages: Message[];
+  emoji: string;
   groupId: number;
   name: string;
   createAt: Date;
@@ -16,6 +18,7 @@ export interface GroupDataRes {
   currentMember: CurrentMember;
   unreadCount: number;
   memberCount: number;
+  members: Member[];
 }
 
 export interface CurrentMember {
@@ -49,5 +52,5 @@ export interface LatestMessage {
   memberId: number;
   fileId: null;
   ownerMember: CurrentMember;
-  files: File[];
+  files: FileServer[];
 }

@@ -11,7 +11,7 @@ const MentionComponent = ({ data }: { data: Member }) => {
       }}
       className="inline  text-blue-600 px-1 py-0.5 rounded font-medium hover:bg-blue-200 cursor-pointer transition-colors"
     >
-      @{data.nickName}
+      @{data.nickName || data.user.fullName}
     </span>
   );
 };

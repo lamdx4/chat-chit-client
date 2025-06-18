@@ -13,6 +13,7 @@ export default interface Group {
   members: Member[];
   memberCount: number;
   unreadCount: number;
+  emoji: string;
 }
 
 // son anh

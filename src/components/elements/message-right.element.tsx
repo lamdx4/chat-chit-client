@@ -1,95 +1,33 @@
 import type Message from "@/types/message.model";
 import { MessageType } from "@/types/message.model";
 import React, { useState } from "react";
-import { Download, ZoomIn, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { File } from "@/types/file.model";
-
-// Image Modal Component
-function ImageModal({
-  images,
-  currentIndex,
-  isOpen,
-  onClose,
-  onNext,
-  onPrev,
-}: {
-  images: File[];
-  currentIndex: number;
-  isOpen: boolean;
-  onClose: () => void;
-  onNext: () => void;
-  onPrev: () => void;
-}) {
-  if (!isOpen) return null;
-
-  const currentImage = images[currentIndex];
-
-  return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-      >
-        <X className="h-8 w-8" />
-      </button>
-
-      {/* Image counter */}
-      <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded-full z-10">
-        {currentIndex + 1} / {images.length}
-      </div>
-
-      {/* Previous button */}
-      {images.length > 1 && currentIndex > 0 && (
-        <button
-          onClick={onPrev}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* Next button */}
-      {images.length > 1 && currentIndex < images.length - 1 && (
-        <button
-          onClick={onNext}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* Download button */}
-      <button
-        onClick={() => window.open(currentImage.url, "_blank")}
-        className="absolute bottom-4 right-4 text-white hover:text-gray-300 bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
-      >
-        <Download className="h-6 w-6" />
-      </button>
-
-      {/* Main image */}
-      <div className="max-w-[90vw] max-h-[90vh] flex items-center justify-center">
-        <img
-          src={currentImage.url || "/placeholder.svg"}
-          alt={`Image ${currentImage.fileId}`}
-          className="max-w-full max-h-full object-contain"
-          onClick={(e) => e.stopPropagation()}
-        />
-      </div>
-
-      {/* Click outside to close */}
-      <div className="absolute inset-0 -z-10" onClick={onClose} />
-    </div>
-  );
-}
+import {
+  Download,
+  MoreVertical,
+  Reply,
+  ZoomIn,
+} from "lucide-react";
+import { FileServer } from "@/types/file.model";
+import { ImageModal } from "./image-modal.element";
+import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { MessageReactions } from "./message-reactions.element";
 
 function MessageRight({ message }: { message: Message }) {
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isOpenTool, setIsOpenTool] = useState(false);
   const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>(
     {}
   );
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
-    images: File[];
+    images: FileServer[];
     currentIndex: number;
   }>({
     isOpen: false,
@@ -150,7 +88,7 @@ function MessageRight({ message }: { message: Message }) {
   };
 
   // Open image modal
-  const openImageModal = (images: File[], index: number) => {
+  const openImageModal = (images: FileServer[], index: number) => {
     setModalState({
       isOpen: true,
       images,
@@ -186,7 +124,11 @@ function MessageRight({ message }: { message: Message }) {
   };
 
   // Render image with proper aspect ratio handling
-  const renderImage = (file: File, index: number, allImages: File[]) => {
+  const renderImage = (
+    file: FileServer,
+    index: number,
+    allImages: FileServer[]
+  ) => {
     if (imageErrors[file.fileId]) {
       // Fallback UI when image fails to load
       const fileInfo = getFileInfo(file.mimeType, file.fileId);
@@ -230,7 +172,7 @@ function MessageRight({ message }: { message: Message }) {
   };
 
   // Render multiple images in grid
-  const renderImageGrid = (files: File[]) => {
+  const renderImageGrid = (files: FileServer[]) => {
     const imageFiles = files.filter((file) =>
       file.mimeType.startsWith("image/")
     );
@@ -340,116 +282,157 @@ function MessageRight({ message }: { message: Message }) {
 
   return (
     <>
-      <div className="flex justify-end mb-2">
-        {((message) => {
-          if (message.type === MessageType.Gif) {
-            return (
-              <div className="max-w-[300px]">
-                <img
-                  src={message.content || "/placeholder.svg"}
-                  alt="gif"
-                  className="w-full h-auto rounded-lg max-h-[300px] object-contain cursor-pointer"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder.svg";
-                  }}
-                  onClick={() => openImageModal(message.files, 0)}
-                />
-              </div>
-            );
-          } else if (message.type === MessageType.File) {
-            const imageFiles =
-              message.files?.filter((file) =>
-                file.mimeType.startsWith("image/")
-              ) || [];
-            const nonImageFiles =
-              message.files?.filter(
-                (file) => !file.mimeType.startsWith("image/")
-              ) || [];
-
-            return (
-              <div className="flex flex-col gap-2 max-w-[350px]">
-                {/* Show text content if exists */}
-                {message.content && message.content.trim() && (
-                  <div className="bg-[#0084ff] text-white rounded-2xl p-2 break-words">
-                    <p className="text-[15px] text-normal text-white">
-                      {message.content}
-                    </p>
-                  </div>
-                )}
-
-                {/* Render images in grid */}
-                {imageFiles.length > 0 && renderImageGrid(imageFiles)}
-
-                {/* Render non-image files */}
-                {nonImageFiles.map((file) => {
-                  const fileInfo = getFileInfo(file.mimeType, file.fileId);
-                  const fileExtension = getFileExtension(file.mimeType);
-
-                  if (file.mimeType.startsWith("video/")) {
-                    return (
-                      <div key={file.fileId} className="max-w-[300px]">
-                        <video
-                          src={file.url}
-                          controls
-                          className="w-full h-auto rounded-lg max-h-[300px]"
-                          preload="metadata"
-                        />
-                      </div>
-                    );
-                  } else if (file.mimeType.startsWith("audio/")) {
-                    return (
-                      <div
-                        key={file.fileId}
-                        className="bg-[#0084ff] rounded-2xl p-3 max-w-[300px]"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-white text-lg">🎵</span>
-                          <span className="text-white text-sm font-medium truncate">
-                            {fileInfo.name}.{fileExtension}
-                          </span>
-                        </div>
-                        <audio src={file.url} controls className="w-full" />
-                      </div>
-                    );
-                  } else {
-                    // Unknown file type
-                    return (
-                      <div
-                        key={file.fileId}
-                        className="bg-[#0084ff] text-white rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:bg-[#0066cc] transition-colors max-w-[300px]"
-                        onClick={() => window.open(file.url, "_blank")}
-                      >
-                        <div className="flex-shrink-0 text-2xl">
-                          {fileInfo.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {fileInfo.name}.{fileExtension}
-                          </p>
-                          <p className="text-xs text-blue-100">
-                            {fileInfo.type} • {file.mimeType}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0">
-                          <Download className="h-4 w-4" />
-                        </div>
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            );
-          } else {
-            return (
-              <div className="bg-[#0084ff] text-white rounded-2xl p-2 break-words max-w-[80%]">
-                <p className="text-[15px] text-normal text-white">
-                  {message.content}
-                </p>
-              </div>
-            );
+      <div
+        className="flex mb-2 flex-1 items-end justify-end "
+        onMouseEnter={() => {
+          setIsOpenTool(true);
+        }}
+        onMouseLeave={() => {
+          if (isEmojiPickerOpen) {
+            return;
           }
-        })(message)}
+          setIsEmojiPickerOpen(false);
+          setIsOpenTool(false);
+        }}
+      >
+        <div
+          className={cn("flex items-center mr-2", {
+            "opacity-0": !isOpenTool,
+            "opacity-100": isOpenTool,
+          })}
+        >
+          <div className="relative">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <MoreVertical className="h-6 w-6" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuItem>Forward</DropdownMenuItem>
+                <DropdownMenuItem>Pin</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="relative">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Reply className="h-6 w-6" />
+            </Button>
+          </div>
+          
+
+        </div>
+
+        <div className="flex flex-col items-end gap-2 ">
+          {((message) => {
+            if (message.type === MessageType.Gif) {
+              return (
+                <div className="max-w-[300px]">
+                  <img
+                    src={message.content || "/placeholder.svg"}
+                    alt="gif"
+                    className="w-full h-auto rounded-lg max-h-[300px] object-contain cursor-pointer"
+                    loading="lazy"
+                    onClick={() => openImageModal(message.files, 0)}
+                  />
+                </div>
+              );
+            } else if (message.type === MessageType.File) {
+              const imageFiles =
+                message.files?.filter((file) =>
+                  file.mimeType.startsWith("image/")
+                ) || [];
+              const nonImageFiles =
+                message.files?.filter(
+                  (file) => !file.mimeType.startsWith("image/")
+                ) || [];
+
+              return (
+                <div className="flex flex-col gap-2 max-w-[350px]">
+                  {/* Show text content if exists */}
+                  {message.content && message.content.trim() && (
+                    <div className="bg-[#0084ff] text-white rounded-2xl p-2 break-words">
+                      <p className="text-[15px] text-normal text-white">
+                        {message.content}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Render images in grid */}
+                  {imageFiles.length > 0 && renderImageGrid(imageFiles)}
+
+                  {/* Render non-image files */}
+                  {nonImageFiles.map((file) => {
+                    const fileInfo = getFileInfo(file.mimeType, file.fileId);
+                    const fileExtension = getFileExtension(file.mimeType);
+
+                    if (file.mimeType.startsWith("video/")) {
+                      return (
+                        <div key={file.fileId} className="max-w-[300px]">
+                          <video
+                            src={file.url}
+                            controls
+                            className="w-full h-auto rounded-lg max-h-[300px]"
+                            preload="metadata"
+                          />
+                        </div>
+                      );
+                    } else if (file.mimeType.startsWith("audio/")) {
+                      return (
+                        <div
+                          key={file.fileId}
+                          className="bg-[#0084ff] rounded-2xl p-3 max-w-[300px]"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-white text-lg">🎵</span>
+                            <span className="text-white text-sm font-medium truncate">
+                              {fileInfo.name}.{fileExtension}
+                            </span>
+                          </div>
+                          <audio src={file.url} controls className="w-full" />
+                        </div>
+                      );
+                    } else {
+                      // Unknown file type
+                      return (
+                        <div
+                          key={file.fileId}
+                          className="bg-[#0084ff] text-white rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:bg-[#0066cc] transition-colors max-w-[300px]"
+                          onClick={() => window.open(file.url, "_blank")}
+                        >
+                          <div className="flex-shrink-0 text-2xl">
+                            {fileInfo.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {fileInfo.name}.{fileExtension}
+                            </p>
+                            <p className="text-xs text-blue-100">
+                              {fileInfo.type} • {file.mimeType}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <Download className="h-4 w-4" />
+                          </div>
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
+              );
+            } else {
+              return (
+                <div className="bg-[#0084ff] text-white rounded-2xl w-fit p-2 break-words max-w-[300px]">
+                  <p className="text-[15px] text-normal text-white">
+                    {message.content}
+                  </p>
+                </div>
+              );
+            }
+          })(message)}
+          <MessageReactions className="flex justify-end" message={message} />
+        </div>
       </div>
 
       {/* Image Modal */}

@@ -80,7 +80,7 @@ export default function MessageChat() {
       </div>
 
       {showChatDetails && selectedGroupId && (
-        <div className="col-span-1 lg:col-span-2 h-full">
+        <div className="col-span-1 lg:col-span-2 h-full overflow-hidden overflow-y-auto">
           <ChatDetailsPanel
             isOpen={showChatDetails}
             onClose={() => setShowChatDetails(false)}

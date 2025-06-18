@@ -57,16 +57,29 @@ const GroupList: React.FC = () => {
                 } else if (
                   groupX.messages.length > 0 &&
                   groupX.messages[groupX.messages.length - 1].type ===
+                    MessageType.Poll
+                ) {
+                  return (
+                    <span className="text-gray-500">
+                      {groupX.messages[groupX.messages.length - 1].ownerMember
+                        .userId === myId
+                        ? "You created a pol"
+                        : groupX.messages[groupX.messages.length - 1]
+                            .ownerMember.user?.fullName + " created a poll"}
+                    </span>
+                  );
+                } else if (
+                  groupX.messages.length > 0 &&
+                  groupX.messages[groupX.messages.length - 1].type ===
                     MessageType.Gif
                 ) {
                   return (
                     <span className="text-gray-500">
                       {groupX.messages[groupX.messages.length - 1].ownerMember
                         .userId === myId
-                        ? "You: "
+                        ? "You sent a gif"
                         : groupX.messages[groupX.messages.length - 1]
-                            .ownerMember.user?.fullName + ": "}
-                      {"Sent a gif"}
+                            .ownerMember.user?.fullName + " sent a gif"}
                     </span>
                   );
                 } else if (
@@ -93,10 +106,9 @@ const GroupList: React.FC = () => {
                     <span className="text-gray-500">
                       {groupX.messages[groupX.messages.length - 1].ownerMember
                         .userId === myId
-                        ? "You: "
+                        ? "You sent a file "
                         : groupX.messages[groupX.messages.length - 1]
-                            .ownerMember.user?.fullName + ": "}
-                      {"Sent a file"}
+                            .ownerMember.user?.fullName + " sent a file"}
                     </span>
                   );
                 } else return <>{"No messages yet"}</>;

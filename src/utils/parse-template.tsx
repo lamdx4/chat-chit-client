@@ -8,7 +8,7 @@ const MentionComponent = ({ data }: { data: Member }) => {
       }}
       className="inline py-0.5 rounded font-medium cursor-pointer transition-colors"
     >
-      @{data.nickName}
+      @{data.nickName || data.user?.fullName}
     </span>
   );
 };

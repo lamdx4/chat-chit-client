@@ -11,6 +11,10 @@ export type ChatAction =
       payload: Group;
     }
   | {
+      type: "ADD_NEW_GROUP";
+      payload: Group;
+    }
+  | {
       type: "ADD_GROUPS";
       payload: {
         groups: Group[];
@@ -23,6 +27,27 @@ export type ChatAction =
   | {
       type: "LOAD_MESSAGES";
       payload: { groupId: number; messages: Message[] };
+    }
+  | {
+      type: "ADD_MESSAGE_TO_EXISTING_GROUP";
+      payload: { groupId: number; message: Message };
+    }
+  | {
+      type: "CHANGE_GROUP_NAME";
+      payload: { groupId: number; name: string };
+    }
+  | {
+      type: "UPDATE_GROUP_AVATAR";
+      payload: { groupId: number; avatar: string };
+    }
+  | {
+      type: "MEMBER_VOTE_POLL";
+      payload: { groupId: number; message: Message };
+    }
+  | { type: "CHANGE_GROUP_EMOJI"; payload: { groupId: number; emoji: string } }
+  | {
+      type: "REACT_MESSAGE";
+      payload: { groupId: number; message: Message };
     };
 
 // Định nghĩa state
@@ -40,6 +65,7 @@ export interface StatusGroupDataPag {
 
 // Định nghĩa kiểu Context
 export interface ChatContextType {
+  dispatch: React.ActionDispatch<[action: ChatAction]>;
   isLoadingGroup: boolean;
   groups: Group[];
   selectedGroupId: number | null;

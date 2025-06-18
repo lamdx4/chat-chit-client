@@ -34,10 +34,24 @@ export const chatReducer = (
       };
     }
 
+    case "ADD_NEW_GROUP":
+      if (state.groups.some((g) => g.groupId === action.payload.groupId)) {
+        return state;
+      }
+      return {
+        ...state,
+        groups: [
+          {
+            ...action.payload,
+            members: action.payload.members || [],
+            messages: action.payload.messages || [],
+          },
+          ...state.groups,
+        ],
+      };
+
     case "ADD_GROUP":
-      if (
-        state.groups.some((g) => g.groupId === action.payload.groupId)
-      ) {
+      if (state.groups.some((g) => g.groupId === action.payload.groupId)) {
         return state;
       }
       return {
@@ -53,6 +67,7 @@ export const chatReducer = (
       };
 
     case "ADD_MESSAGE":
+      console.log(action.payload.message);
       action.payload.message.createdAt = new Date(
         action.payload.message.createdAt
       );
@@ -105,6 +120,134 @@ export const chatReducer = (
         ],
       };
 
+      return {
+        ...state,
+        groups: updatedGroups,
+      };
+    }
+
+    case "ADD_MESSAGE_TO_EXISTING_GROUP": {
+      action.payload.message.createdAt = new Date(
+        action.payload.message.createdAt
+      );
+
+      const updatedGroups = state.groups.map((group) =>
+        group.groupId === action.payload.groupId
+          ? {
+              ...group,
+              messages: group.messages.some(
+                (msg) => msg.messageId === action.payload.message.messageId
+              )
+                ? group.messages
+                : [...group.messages, action.payload.message],
+            }
+          : group
+      );
+
+      // Sort groups by latest message timestamp, most recent first
+      const sortedGroups = updatedGroups.sort((a, b) => {
+        const aLatestMessage = a.messages[a.messages.length - 1];
+        const bLatestMessage = b.messages[b.messages.length - 1];
+
+        if (!aLatestMessage && !bLatestMessage) return 0;
+        if (!aLatestMessage) return 1;
+        if (!bLatestMessage) return -1;
+
+        return (
+          new Date(bLatestMessage.createdAt).getTime() -
+          new Date(aLatestMessage.createdAt).getTime()
+        );
+      });
+
+      return {
+        ...state,
+        groups: sortedGroups,
+      };
+    }
+
+    case "CHANGE_GROUP_NAME": {
+      const updatedGroups = state.groups.map((group) =>
+        group.groupId === action.payload.groupId
+          ? {
+              ...group,
+              name: action.payload.name,
+            }
+          : group
+      );
+      return {
+        ...state,
+        groups: updatedGroups,
+      };
+    }
+
+    case "UPDATE_GROUP_AVATAR": {
+      const updatedGroups = state.groups.map((group) =>
+        group.groupId === action.payload.groupId
+          ? {
+              ...group,
+              avatar: action.payload.avatar,
+            }
+          : group
+      );
+      return {
+        ...state,
+        groups: updatedGroups,
+      };
+    }
+
+    case "MEMBER_VOTE_POLL": {
+      const updatedGroups = state.groups.map((group) =>
+        group.groupId === action.payload.groupId
+          ? {
+              ...group,
+              messages: group.messages.map((message) =>
+                message.messageId === action.payload.message.messageId
+                  ? {
+                      ...message, 
+                      ...action.payload.message,
+                    }
+                  : message
+              ),
+            }
+          : group
+      );
+      return {
+        ...state,
+        groups: updatedGroups,
+      };
+    }
+
+    case "CHANGE_GROUP_EMOJI": {
+      const updatedGroups = state.groups.map((group) =>
+        group.groupId === action.payload.groupId
+          ? {
+              ...group,
+              emoji: action.payload.emoji,
+            }
+          : group
+      );
+      return {
+        ...state,
+        groups: updatedGroups,
+      };
+    }
+
+    case "REACT_MESSAGE": {
+      const updatedGroups = state.groups.map((group) =>
+        group.groupId === action.payload.groupId
+          ? {
+              ...group,
+              messages: group.messages.map((message) =>
+                message.messageId === action.payload.message.messageId
+                  ? {
+                      ...message,
+                      reactions: action.payload.message.reactions || [],
+                    }
+                  : message
+              ),
+            }
+          : group
+      );
       return {
         ...state,
         groups: updatedGroups,

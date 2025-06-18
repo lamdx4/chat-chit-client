@@ -1,4 +1,4 @@
-import React, {useState } from "react";
+import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type Message from "@/types/message.model";
 import { MessageType } from "@/types/message.model";
@@ -23,14 +23,10 @@ import {
 } from "../ui/dropdown-menu";
 import { chatService } from "@/services/group-service";
 import { useChatContext } from "@/hooks/use-chat";
-import { MessageReactions } from "./message-reactions.element";
-import useAuth from "@/hooks/use-auth";
 
 // Image Modal Component (shared with MessageRight)
 
 function MessageTextLeft({ message }: { message: Message }) {
-
-  const user = useAuth();
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isOpenTool, setIsOpenTool] = useState(false);
   const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>(
@@ -299,9 +295,6 @@ function MessageTextLeft({ message }: { message: Message }) {
           setIsOpenTool(true);
         }}
         onMouseLeave={() => {
-          if (isEmojiPickerOpen) {
-            return;
-          }
           setIsEmojiPickerOpen(false);
           setIsOpenTool(false);
         }}
@@ -322,12 +315,12 @@ function MessageTextLeft({ message }: { message: Message }) {
         </Tooltip>
 
         <div className="">
-          {((messageX) => {
-            if (messageX.type === MessageType.Gif) {
+          {((message) => {
+            if (message.type === MessageType.Gif) {
               return (
                 <div className="max-w-[300px]">
                   <img
-                    src={messageX.content || "/placeholder.svg"}
+                    src={message.content || "/placeholder.svg"}
                     alt="gif"
                     className="w-full h-auto rounded-lg max-h-[300px] object-contain cursor-pointer"
                     loading="lazy"
@@ -338,7 +331,7 @@ function MessageTextLeft({ message }: { message: Message }) {
                       openImageModal(
                         [
                           {
-                            url: messageX.content,
+                            url: message.content,
                             fileId: "gif",
                             mimeType: "image/gif",
                           },
@@ -349,13 +342,13 @@ function MessageTextLeft({ message }: { message: Message }) {
                   />
                 </div>
               );
-            } else if (messageX.type === MessageType.File) {
+            } else if (message.type === MessageType.File) {
               const imageFiles =
-                messageX.files?.filter((file) =>
+                message.files?.filter((file) =>
                   file.mimeType.startsWith("image/")
                 ) || [];
               const nonImageFiles =
-                messageX.files?.filter(
+                message.files?.filter(
                   (file) => !file.mimeType.startsWith("image/")
                 ) || [];
 
@@ -434,18 +427,14 @@ function MessageTextLeft({ message }: { message: Message }) {
               );
             } else {
               return (
-                <div className="rounded-[18px] border-solid pl-3 pr-3 pt-2 pb-2 items-center w-fit bg-[#F0F0F0] max-w-[300px] ">
-                  <p className="text-[15px] text-normal text-[rgb(5, 5, 5)] break-words ">
-                    {messageX.content}
+                <div className="rounded-[18px] border-solid pl-3 pr-3 pt-2 pb-2 items-center  bg-[#F0F0F0] break-words">
+                  <p className="text-[15px] text-normal text-[rgb(5, 5, 5)]">
+                    {message.content}
                   </p>
                 </div>
               );
             }
           })(message)}
-          <MessageReactions
-            message={message}
-            currentUserId={user.user?.userId || -1}
-          />
         </div>
 
         <div
@@ -477,6 +466,11 @@ function MessageTextLeft({ message }: { message: Message }) {
                     console.log("Emoji selected:", emoji);
                     chatService
                       .reactMessage(selectedGroupId!, message.messageId, emoji)
+                      .then((res) => {
+                        if (res) {
+                          console.log("Emoji reaction added:", res.data);
+                        }
+                      })
                       .catch((error) => {
                         console.error("Error adding emoji reaction:", error);
                       });

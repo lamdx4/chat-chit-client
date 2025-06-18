@@ -26,42 +26,9 @@ export const chatService = {
               createAt: new Date(groupData.createAt),
               groupType: groupData.groupType,
               link: groupData.link,
-              messages: [
-                {
-                  messageId: groupData.latestMessage.messageId,
-                  content: groupData.latestMessage.content,
-                  createdAt: new Date(groupData.latestMessage.createdAt),
-                  type: groupData.latestMessage.type,
-                  status: groupData.latestMessage.status,
-                  replyMessageId: groupData.latestMessage.replyMessageId,
-                  isPin: groupData.latestMessage.isPin,
-                  memberId: groupData.latestMessage.memberId,
-                  ownerMember: groupData.latestMessage.ownerMember,
-                  manipulateMembers: groupData.latestMessage.manipulateMembers,
-                  files: groupData.latestMessage.files,
-                },
-              ],
-              members: [
-                {
-                  memberId: groupData.currentMember.memberId,
-                  groupId: groupData.currentMember.groupId,
-                  userId: groupData.currentMember.userId,
-                  lastReadMessageId: groupData.currentMember.lastReadMessageId,
-                  lastReceivedMessageId:
-                    groupData.currentMember.lastReceivedMessageId,
-                  roleId: groupData.currentMember.roleId,
-                  status: groupData.currentMember.status,
-                  timeJoin: new Date(groupData.currentMember.timeJoin),
-                  nickName: groupData.currentMember.nickName,
-                  role: groupData.currentMember.role
-                    ? {
-                        roleId: groupData.currentMember.role.roleId,
-                        name: groupData.currentMember.role.name,
-                      }
-                    : undefined,
-                  user: groupData.currentMember.user,
-                },
-              ],
+              messages: groupData.messages,
+              emoji: groupData.emoji,
+              members: [...groupData.members],
               memberCount: groupData.memberCount,
               unreadCount: groupData.unreadCount,
             };
@@ -160,6 +127,7 @@ export const chatService = {
       }
     );
   },
+
   async createGroup() {
     try {
       const response = await fetch(`http://localhost:3000/chat/`, {
@@ -188,6 +156,86 @@ export const chatService = {
     }
   },
 
+  async searchMember(groupId: number, searchTerm: string, limit: number) {
+    return await axios_auth.get<ResponseData<Member[]>>(
+      `/group/${groupId}/member/search`,
+      {
+        params: {
+          searchTerm,
+          limit,
+        },
+      }
+    );
+  },
+
+  async changeGroupChatName(groupId: number, name: string) {
+    return await axios_auth.post<ResponseData<Message>>(
+      `/group/${groupId}/rename`,
+      { name }
+    );
+  },
+
+  async createPoll(
+    groupId: number,
+    content: string,
+    isMultipleChoice: boolean,
+    expiredAt: Date | undefined,
+    options: string[]
+  ) {
+    return await axios_auth.post<ResponseData<Message>>(
+      `/group/${groupId}/poll/create`,
+      {
+        content,
+        isMultipleChoice,
+        expiredAt: expiredAt ? expiredAt.toISOString() : null,
+        options,
+      }
+    );
+  },
+
+  async changeAvatarGroup(groupId: number, file: File) {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return await axios_auth.put<ResponseData<Group>>(
+      `/group/${groupId}/change-avatar`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+  },
+
+  async votePoll(groupId: number, messageId: number, optionIds: number[]) {
+    return await axios_auth.post<ResponseData<Message>>(
+      `/group/${groupId}/${messageId}/member/vote`,
+      {
+        optionIds,
+      }
+    );
+  },
+
+  async addMemberToGroup(groupId: number, userIds: number[]) {
+    return await axios_auth.post<ResponseData<Member[]>>(
+      `/group/${groupId}/add-member`,
+      userIds
+    );
+  },
+
+  async changeEmojiGroup(groupId: number, emoji: string) {
+    try {
+      const res = await axios_auth.post<ResponseData<Group>>(
+        `/group/${groupId}/change-emoji`,
+        { emoji }
+      );
+      return res.data.data;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  },
+
   async getInfoMember(groupId: number, userId: number) {
     try {
       const res = await axios_auth.get<ResponseData<Member>>(
@@ -198,5 +246,12 @@ export const chatService = {
       console.error(error);
       return null;
     }
+  },
+
+  async reactMessage(groupId: number, messageId: number, emoji: string) {
+    return await axios_auth.post<ResponseData<Message>>(
+      `/group/${groupId}/message/${messageId}/react`,
+      { emoji }
+    );
   },
 };

@@ -21,11 +21,9 @@ export interface Member {
   status: MemberStatusType;
   timeJoin: Date;
   nickName: string;
-
-  // Relations
   role?: GroupRole;
   group?: Group;
-  user?: User;
+  user: User;
   lastReadMessage?: Message;
   lastReceivedMessage?: Message;
   manipulateMembers?: Member[];
