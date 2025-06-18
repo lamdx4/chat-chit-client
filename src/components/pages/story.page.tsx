@@ -98,9 +98,10 @@ export default function StoryPage() {
     setSelectedStory(null);
   };
 
-  const handleStoryReact = async (userIndex: number, storyIndex: number) => {
+  const handleStoryReact = async (_userIndex: number, storyIndex: number) => {
     if (!selectedStory) return;
     
+
     const currentStory = selectedStory.stories[storyIndex];
     
     // Only react if story hasn't been reacted to

@@ -47,6 +47,27 @@ export function StoryViewer({
   const currentStory = currentUser?.stories[currentStoryIndex]
   const storyDuration = currentStory?.type === "image" ? 5000 : 10000
 
+  const nextStory = useCallback(() => {
+    const nextStoryIndex = currentStoryIndex + 1
+
+    if (nextStoryIndex < currentUser.stories.length) {
+      setCurrentStoryIndex(nextStoryIndex)
+      setProgress(0)
+      onStoryChange?.(currentUserIndex, nextStoryIndex)
+    } else {
+      // Move to next user
+      const nextUserIndex = currentUserIndex + 1
+      if (nextUserIndex < stories.length) {
+        setCurrentUserIndex(nextUserIndex)
+        setCurrentStoryIndex(0)
+        setProgress(0)
+        onStoryChange?.(nextUserIndex, 0)
+      } else {
+        onClose()
+      }
+    }
+  }, [currentUserIndex, currentStoryIndex, currentUser, stories, onClose, onStoryChange])
+
   // Auto-advance story
   useEffect(() => {
     if (isPaused || isMenuOpen || showInteractModal) return
@@ -68,7 +89,7 @@ export function StoryViewer({
         clearInterval(progressIntervalRef.current)
       }
     }
-  }, [currentUserIndex, currentStoryIndex, isPaused, isMenuOpen, showInteractModal, storyDuration])
+  }, [currentUserIndex, currentStoryIndex, isPaused, isMenuOpen, showInteractModal, storyDuration, nextStory])
 
   // Handle video events
   useEffect(() => {
@@ -83,26 +104,7 @@ export function StoryViewer({
     }
   }, [currentStory, isPaused, isMuted])
 
-  const nextStory = useCallback(() => {
-    const nextStoryIndex = currentStoryIndex + 1
-
-    if (nextStoryIndex < currentUser.stories.length) {
-      setCurrentStoryIndex(nextStoryIndex)
-      setProgress(0)
-      onStoryChange?.(currentUserIndex, nextStoryIndex)
-    } else {
-      // Move to next user
-      const nextUserIndex = currentUserIndex + 1
-      if (nextUserIndex < stories.length) {
-        setCurrentUserIndex(nextUserIndex)
-        setCurrentStoryIndex(0)
-        setProgress(0)
-        onStoryChange?.(nextUserIndex, 0)
-      } else {
-        onClose()
-      }
-    }
-  }, [currentUserIndex, currentStoryIndex, currentUser, stories, onClose, onStoryChange])
+  
 
   const previousStory = useCallback(() => {
     const prevStoryIndex = currentStoryIndex - 1

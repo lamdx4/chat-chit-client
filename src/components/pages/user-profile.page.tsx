@@ -130,7 +130,7 @@ export default function UserProfile() {
     }
   }, [userInformation?.userId]);
 
-  const handleStoryChange = async (userIndex: number, storyIndex: number) => {
+  const handleStoryChange = async (_userIndex: number, storyIndex: number) => {
     const story = userStories[storyIndex];
     if (story && !story.isViewed) {
       const result = await viewStory(story.storyId);
@@ -168,9 +168,9 @@ export default function UserProfile() {
     }
   };
 
-  const handleStoryReact = async (userIndex: number, storyIndex: number) => {
+  const handleStoryReact = async (_userIndex: number, storyIndex: number) => {
     const currentStory = userStories[storyIndex];
-    
+      
     if (!currentStory) {
       toast.error("Story not found");
       return;
