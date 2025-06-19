@@ -53,11 +53,14 @@ export default function LoginPage() {
         auth.authenticate(token.accessToken, user, token.refreshToken);
         navigate("/u");
       } else if (res.status === 404) {
-        if (res.data.message === "USER_NOT_FOUND") {
-          setMessage("identifier or password is incorrect");
+        if (res.data.message === "USER_NOT_FOUND" ) {
+          setMessage("Identifier or password is incorrect");
         }
       } else if (res.status === 400) {
-        if (res.data.message === "VALIDATE_ERROR") {
+        if (res.data.message === "INVALID_INFORMATION_LOGIN") {
+          setMessage("Identifier or password is incorrect");
+        }
+        else if (res.data.message === "VALIDATE_ERROR") {
           if (res.data.errors) {
             for (const key in res.data.errors) {
               if (Object.prototype.hasOwnProperty.call(res.data.errors, key)) {

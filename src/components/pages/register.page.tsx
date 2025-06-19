@@ -75,7 +75,7 @@ export default function RegisterPage() {
         .then((res) => res),
     onSuccess: (res) => {
       console.log("Registration response:", res);
-      if (res.status === 201) {
+      if (res.status === 201 || res.status === 200) {
         toast.success("Registration successful!", {
           duration: 3000,
         });
