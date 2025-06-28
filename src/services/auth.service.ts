@@ -5,19 +5,31 @@ import { FormValues } from "@/components/pages/register.page";
 
 const authService = {
   async login(email: string, password: string) {
-    const form = new FormData();
-    form.append("phone", email);
-    form.append("password", password);
-    const res = await axios_base.post<ResponseData<LoginResponseSuccessfully>>(
+    return axios_base.post<ResponseData<LoginResponseSuccessfully>>(
       "auth/login",
-      form
+      {
+        identifier: email,
+        password: password,
+      }
     );
+  },
 
-    return res.data;
+  async getLinkGoogleLoginUrl() {
+    return axios_base.get<ResponseData<{ url: string }>>(
+      "auth/login-with-google"
+    );
+  },
+  async loginWithGoogle(code: string) {
+    return axios_base.post<ResponseData<LoginResponseSuccessfully>>(
+      "auth/login-with-google",
+      {
+        code: code,
+      }
+    );
   },
   async register(data: FormValues) {
     return axios_base.post<ResponseData<object>>("auth/register", data);
-  }
+  },
 };
 
 export default authService;

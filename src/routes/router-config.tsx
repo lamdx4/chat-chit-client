@@ -14,6 +14,7 @@ import OuterLayout from "@/components/layouts/x.layout";
 import SettingPage from "@/components/pages/setting.page";
 import LinkGoogleCallbackPage from "@/components/pages/link-sucess.page";
 import StoryPage from "@/components/pages/story.page";
+import LoginCallbackPage from "@/components/pages/login-with-google-callback.page";
 
 const appRouterConfig: RouteObject[] = [
   {
@@ -40,7 +41,7 @@ const appRouterConfig: RouteObject[] = [
       <ProtectedRouteAuth
         element={
           <ChatProvider>
-          <MainLayout />
+            <MainLayout />
           </ChatProvider>
         }
       />
@@ -80,6 +81,11 @@ const appRouterConfig: RouteObject[] = [
         element: <LinkGoogleCallbackPage></LinkGoogleCallbackPage>,
       },
     ],
+  },
+
+  {
+    path: "login-with-google",
+    element: <LoginCallbackPage />,
   },
   {
     path: "*",

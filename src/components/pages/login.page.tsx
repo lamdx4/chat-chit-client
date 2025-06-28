@@ -17,9 +17,12 @@ import { axios_base } from "@/config/axios-auth";
 import { ResponseData } from "@/types/response.types";
 import { LoginResponseSuccessfully } from "@/services/types/login-response.types";
 import { toast } from "sonner";
+import googleIcon from "@/assets/google-icon.svg";
 
 const loginSchema = z.object({
-  identifier: z.string().min(1, "identifier number is required"),
+  identifier: z
+    .string()
+    .min(1, "Phone number or username or email number is required"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -38,6 +41,25 @@ export default function LoginPage() {
     },
   });
 
+  const mutationLoginWithGoogle = useMutation({
+    mutationFn: async () => {
+      return axios_base.get<ResponseData<{ url: string }>>(
+        "auth/login-with-google"
+      );
+    },
+    onSuccess: (res) => {
+      if (res.status === 200) {
+        window.location.href = res.data.data.url;
+      } else {
+        toast.error("Failed to get Google login URL");
+      }
+    },
+    onError: (error) => {
+      console.error("API Login with Google: ", error);
+      toast.error("An error occurred while trying to log in with Google.");
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: async (loginData: LoginFormData) => {
       return axios_base.post<ResponseData<LoginResponseSuccessfully>>(
@@ -53,21 +75,24 @@ export default function LoginPage() {
         auth.authenticate(token.accessToken, user, token.refreshToken);
         navigate("/u");
       } else if (res.status === 404) {
-        if (res.data.message === "USER_NOT_FOUND" ) {
-          setMessage("Identifier or password is incorrect");
+        if (res.data.message === "USER_NOT_FOUND") {
+          setMessage(
+            "Phone number or username or email or password is incorrect"
+          );
         }
       } else if (res.status === 400) {
         if (res.data.message === "INVALID_INFORMATION_LOGIN") {
-          setMessage("Identifier or password is incorrect");
-        }
-        else if (res.data.message === "VALIDATE_ERROR") {
+          setMessage(
+            "Phone number or username or email or password is incorrect"
+          );
+        } else if (res.data.message === "VALIDATE_ERROR") {
           if (res.data.errors) {
             for (const key in res.data.errors) {
               if (Object.prototype.hasOwnProperty.call(res.data.errors, key)) {
                 toast.error(res.data.errors[key]);
               }
             }
-          } else toast.error("Registration failed");
+          } else toast.error("Login failed");
         }
       } else if (res.status === 500) {
         setMessage("Server error. Please try again later.");
@@ -105,7 +130,7 @@ export default function LoginPage() {
                 <Input
                   {...form.register("identifier")}
                   type="text"
-                  placeholder="identifier number"
+                  placeholder="Phone number or username or email "
                   className="h-12"
                   autoFocus
                   disabled={mutation.isPending}
@@ -128,7 +153,6 @@ export default function LoginPage() {
                     {form.formState.errors.password.message}
                   </p>
                 )}
-
                 <p
                   className={`text-sm text-red-700 transition-opacity duration-500 ${
                     messageLogin ? "opacity-100" : "opacity-0"
@@ -142,6 +166,23 @@ export default function LoginPage() {
                 >
                   {mutation.isPending ? "Logging in..." : "Log In"}
                 </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 text-base bg-white border border-gray-300 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      mutationLoginWithGoogle.mutate();
+                    }}
+                  >
+                    <img
+                      src={googleIcon}
+                      alt="Google Icon"
+                      className="w-7 h-7 mr-2"
+                    />
+                    Log in with Google
+                  </Button>
+                </div>
                 <div className="flex items-center justify-between">
                   <NavLink
                     to="/forgot-password"
